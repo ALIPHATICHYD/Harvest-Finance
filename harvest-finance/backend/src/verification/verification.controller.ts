@@ -12,6 +12,9 @@ import {
   HttpStatus,
   DefaultValuePipe,
   ParseIntPipe,
+  UseGuards,
+  Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -22,6 +25,7 @@ import {
   ApiBody,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { VerificationService } from './services/verification.service';
 import { IpfsService } from './services/ipfs.service';
@@ -32,6 +36,8 @@ import {
   QueryVerificationDto,
 } from './dto/verification.dto';
 import { VerificationStatus, ApprovalRole } from './enums/verification.enums';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserRole } from '../database/entities/user.entity';
 
 // Allowed MIME types for image uploads
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
@@ -39,6 +45,8 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 @ApiTags('verifications')
 @Controller('verifications')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class VerificationController {
   constructor(
     private readonly verificationService: VerificationService,
@@ -104,7 +112,10 @@ export class VerificationController {
     }
 
     // Upload to IPFS
-    const result = await this.ipfsService.uploadFile(file.buffer, file.originalname);
+    const result = await this.ipfsService.uploadFile(
+      file.buffer,
+      file.originalname,
+    );
 
     return result;
   }
@@ -126,9 +137,7 @@ export class VerificationController {
   })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 404, description: 'Delivery not found' })
-  async createVerification(
-    @Body() dto: CreateVerificationDto,
-  ) {
+  async createVerification(@Body() dto: CreateVerificationDto) {
     return this.verificationService.createVerification(dto);
   }
 
@@ -202,7 +211,8 @@ export class VerificationController {
   @Get(':id')
   @ApiOperation({
     summary: 'Get verification by ID',
-    description: 'Retrieve full details of a verification including approval progress',
+    description:
+      'Retrieve full details of a verification including approval progress',
   })
   @ApiParam({ name: 'id', description: 'Verification ID' })
   @ApiResponse({
@@ -227,7 +237,8 @@ export class VerificationController {
   @Get()
   @ApiOperation({
     summary: 'Get verifications',
-    description: 'List verifications with optional status filter and pagination',
+    description:
+      'List verifications with optional status filter and pagination',
   })
   @ApiQuery({ name: 'status', required: false, enum: VerificationStatus })
   @ApiQuery({ name: 'page', required: false, type: Number })
