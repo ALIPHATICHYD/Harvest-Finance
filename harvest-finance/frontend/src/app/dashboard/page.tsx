@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { VaultOverview } from "@/components/dashboard/VaultOverview";
 import { SeasonalTipsList, MilestoneNotification } from "@/components/seasonal-tips";
 import { AIAssistantChat } from "@/components/ai-assistant";
+import { useAIAssistantStore } from "@/hooks/useAIAssistant";
 import { TrendingUp, Wallet, ArrowRight } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +21,13 @@ export default function DashboardPage() {
     progressPercent: vaultProgress.progressPercent,
     currentMilestone: vaultProgress.milestoneReached || undefined,
   };
+
+  const openChat = useAIAssistantStore((s) => s.openChat);
+
+  useEffect(() => {
+    // Auto-open the AI Assistant when on the dashboard for visibility
+    openChat();
+  }, [openChat]);
 
   return (
     <div className="space-y-8 pb-10">

@@ -5,7 +5,8 @@ import type {
   SeasonalTip,
 } from './seasonal-tips';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Use relative base so API calls resolve to the same origin (avoids CORS/port mismatches)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 const apiClient = axios.create({
   baseURL: API_BASE,

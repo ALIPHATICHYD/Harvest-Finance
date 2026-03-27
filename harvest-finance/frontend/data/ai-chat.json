@@ -1,0 +1,16 @@
+[
+  {
+    "user": {
+      "content": "Test persistence",
+      "timestamp": "2026-03-27T23:38:09.785Z",
+      "context": {
+        "currentSeason": "Autumn",
+        "vaultBalance": 50
+      }
+    },
+    "assistant": {
+      "content": "I'm here to help with all aspects of your farming journey! Whether it's crop selection, vault strategies, seasonal planning, or milestone tracking, I can provide personalized advice based on your current situation.",
+      "timestamp": "2026-03-27T23:38:09.784Z"
+    }
+  }
+]

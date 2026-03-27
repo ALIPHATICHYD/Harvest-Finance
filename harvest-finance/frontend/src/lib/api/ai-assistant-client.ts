@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Use relative API path by default so requests resolve to the same origin (avoids CORS in dev)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 const apiClient = axios.create({
   baseURL: API_BASE,

@@ -25,6 +25,7 @@ interface AIAssistantState {
 
   sendMessage: (message: string, context?: FarmContext) => Promise<void>;
   useSuggestion: (suggestion: string, context?: FarmContext) => Promise<void>;
+  loadHistoryFromServer?: () => Promise<void>;
   toggleOpen: () => void;
   openChat: () => void;
   closeChat: () => void;
@@ -100,6 +101,43 @@ export const useAIAssistantStore = create<AIAssistantState>((set, get) => ({
     await get().sendMessage(suggestion, context);
   },
 
+  // Load persisted history from server-side store if available
+  loadHistoryFromServer: async () => {
+    try {
+      const res = await fetch('/api/v1/ai-assistant/chat');
+      if (!res.ok) return;
+      const body = await res.json();
+      const history = body.history || [];
+
+      const mapped: ChatEntry[] = [];
+      for (const item of history) {
+        if (item.user) {
+          mapped.push({
+            id: generateId(),
+            role: 'user',
+            content: item.user.content,
+            timestamp: item.user.timestamp ? new Date(item.user.timestamp) : new Date(),
+          });
+        }
+        if (item.assistant) {
+          mapped.push({
+            id: generateId(),
+            role: 'assistant',
+            content: item.assistant.content,
+            timestamp: item.assistant.timestamp ? new Date(item.assistant.timestamp) : new Date(),
+            suggestions: item.assistant.suggestions || undefined,
+          });
+        }
+      }
+
+      if (mapped.length > 0) {
+        set((state) => ({ messages: [...state.messages, ...mapped] }));
+      }
+    } catch (e) {
+      // ignore
+    }
+  },
+
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
   openChat: () => set({ isOpen: true }),
   closeChat: () => set({ isOpen: false }),
@@ -115,3 +153,37 @@ export const useAIAssistantStore = create<AIAssistantState>((set, get) => ({
     }),
   clearError: () => set({ error: null }),
 }));
+
+// Persist chat to sessionStorage
+try {
+  const key = 'ai-assistant-state-v1';
+  const stored = sessionStorage.getItem(key);
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    // hydrate store with persisted values
+    useAIAssistantStore.setState({
+      messages: (parsed.messages || []).map((m: any) => ({
+        ...m,
+        timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
+      })),
+      isOpen: parsed.isOpen || false,
+      suggestions: parsed.suggestions || undefined,
+    });
+  }
+
+  // subscribe to changes and save
+  useAIAssistantStore.subscribe((state) => {
+    const toStore = {
+      messages: state.messages.map((m) => ({ ...m, timestamp: m.timestamp?.toISOString() })),
+      isOpen: state.isOpen,
+      suggestions: state.suggestions,
+    };
+    try {
+      sessionStorage.setItem(key, JSON.stringify(toStore));
+    } catch (e) {
+      // ignore storage errors
+    }
+  });
+} catch (e) {
+  // server-side or storage not available
+}

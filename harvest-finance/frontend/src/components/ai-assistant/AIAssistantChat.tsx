@@ -34,6 +34,21 @@ export function AIAssistantChat({ context }: AIAssistantChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    // hydrate from server if no session messages
+    if (messages.length === 0) {
+      const load = async () => {
+        try {
+          await useAIAssistantStore.getState().loadHistoryFromServer?.();
+        } catch (e) {
+          // ignore
+        }
+      };
+      load();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSend = (message: string) => {
     sendMessage(message, context);
   };
