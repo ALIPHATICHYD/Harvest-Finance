@@ -5,6 +5,8 @@ import { Order, OrderStatus } from '../entities/order.entity';
 import { Transaction, TransactionStatus, TransactionType } from '../entities/transaction.entity';
 import { Verification, VerificationStatus } from '../entities/verification.entity';
 import { CreditScore } from '../entities/credit-score.entity';
+import { CropCycle } from '../entities/crop-cycle.entity';
+import { FarmVault } from '../entities/farm-vault.entity';
 
 /**
  * Seed Data Configuration
@@ -38,6 +40,7 @@ export async function generateSeedData(dataSource: DataSource): Promise<SeedConf
   const transactionRepository = dataSource.getRepository(Transaction);
   const verificationRepository = dataSource.getRepository(Verification);
   const creditScoreRepository = dataSource.getRepository(CreditScore);
+  const cropCycleRepository = dataSource.getRepository(CropCycle);
 
   // Hash password for all users
   const hashedPassword = await bcrypt.hash('password123', 10);
@@ -422,6 +425,8 @@ export async function clearSeedData(dataSource: DataSource): Promise<void> {
   await dataSource.query('DELETE FROM verifications');
   await dataSource.query('DELETE FROM transactions');
   await dataSource.query('DELETE FROM orders');
+  await dataSource.query('DELETE FROM farm_vaults');
+  await dataSource.query('DELETE FROM crop_cycles');
   await dataSource.query('DELETE FROM users');
   console.log('✅ Seed data cleared!');
 }

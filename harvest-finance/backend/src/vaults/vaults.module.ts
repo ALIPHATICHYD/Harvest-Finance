@@ -4,12 +4,13 @@ import { VaultsController } from './vaults.controller';
 import { VaultsService } from './vaults.service';
 import { Vault } from '../database/entities/vault.entity';
 import { Deposit } from '../database/entities/deposit.entity';
+import { Withdrawal } from '../database/entities/withdrawal.entity';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Vault, Deposit]),
+    TypeOrmModule.forFeature([Vault, Deposit, Withdrawal]),
     AuthModule,
     NotificationsModule,
   ],

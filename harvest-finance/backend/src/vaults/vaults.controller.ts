@@ -76,6 +76,49 @@ export class VaultsController {
   }
 
   /**
+   * Withdraw funds from a vault
+   */
+  @Post(':vaultId/withdraw')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Withdraw funds from a vault' })
+  @ApiParam({
+    name: 'vaultId',
+    description: 'Vault ID (UUID)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        amount: { type: 'number', example: 100 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Withdrawal successful',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid amount or insufficient balance',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Vault not found',
+  })
+  async withdrawFromVault(
+    @Param('vaultId') vaultId: string,
+    @Body('amount') amount: number,
+    @Request() req: any,
+  ): Promise<any> {
+    return this.vaultsService.withdrawFromVault(vaultId, req.user.id, amount);
+  }
+
+  /**
    * Get all vaults for the authenticated user
    */
   @Get('my-vaults')

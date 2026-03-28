@@ -5,6 +5,7 @@ import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { MapSection } from '@/components/landing/MapSection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
 import { Footer } from '@/components/landing/Footer';
+import { AIAssistantChat } from '@/components/ai-assistant';
 
 export default function Home() {
   return (
@@ -17,6 +18,7 @@ export default function Home() {
         <BenefitsSection />
       </main>
       <Footer />
+      <AIAssistantChat />
     </div>
   );
 }

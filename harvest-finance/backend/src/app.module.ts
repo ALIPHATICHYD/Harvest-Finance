@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-yet';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { OrdersModule } from './orders/orders.module';
@@ -20,6 +19,8 @@ import { AchievementsModule } from './achievements/achievements.module';
 import { RewardsModule } from './rewards/rewards.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ExportModule } from './export/export.module';
+import { FarmVaultsModule } from './farm-vaults/farm-vaults.module';
 import {
   User,
   Order,
@@ -31,6 +32,9 @@ import {
   Notification,
   Achievement,
   Reward,
+  Withdrawal,
+  CropCycle,
+  FarmVault,
 } from './database/entities';
  main
 import { CreateInitialSchema1700000000000 } from './database/migrations/1700000000000-CreateInitialSchema';
@@ -38,6 +42,8 @@ import { CreateAchievements1700000000004 } from './database/migrations/170000000
 import { CreateRewards1700000000005 } from './database/migrations/1700000000005-CreateRewards';
 import { CreateVaultsAndDeposits1700000000003 } from './database/migrations/1700000000003-CreateVaultsAndDeposits';
 import { CreateNotifications1700000000006 } from './database/migrations/1700000000006-CreateNotifications';
+import { CreateWithdrawals1700000000007 } from './database/migrations/1700000000007-CreateWithdrawals';
+import { CreateFarmVaults1700000000008 } from './database/migrations/1700000000008-CreateFarmVaults';
 
 @Module({
   imports: [
@@ -68,6 +74,9 @@ import { CreateNotifications1700000000006 } from './database/migrations/17000000
           Achievement,
           Reward,
           Notification,
+          Withdrawal,
+          CropCycle,
+          FarmVault,
         ],
         migrations: [
           CreateInitialSchema1700000000000,
@@ -75,6 +84,8 @@ import { CreateNotifications1700000000006 } from './database/migrations/17000000
           CreateAchievements1700000000004,
           CreateRewards1700000000005,
           CreateNotifications1700000000006,
+          CreateWithdrawals1700000000007,
+          CreateFarmVaults1700000000008,
         ],
  main
         synchronize: false, // Disable auto-sync, use migrations
@@ -83,24 +94,10 @@ import { CreateNotifications1700000000006 } from './database/migrations/17000000
       }),
       inject: [ConfigService],
     }),
-    CacheModule.registerAsync({
+    CacheModule.register({
       isGlobal: true,
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        const store = await redisStore({
-          socket: {
-            host: configService.get<string>('REDIS_HOST'),
-            port: parseInt(
-              configService.get<string>('REDIS_PORT') || '6379',
-              10,
-            ),
-          },
-        });
-        return {
-          store,
-        };
-      },
-      inject: [ConfigService],
+      ttl: 600, // 10 minutes
+      max: 100, // maximum number of items in cache
     }),
     AuthModule,
     UsersModule,
@@ -114,6 +111,8 @@ import { CreateNotifications1700000000006 } from './database/migrations/17000000
     RewardsModule,
     NotificationsModule,
     AdminModule,
+    ExportModule,
+    FarmVaultsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

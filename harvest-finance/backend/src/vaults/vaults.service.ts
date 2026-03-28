@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Vault, VaultStatus } from '../database/entities/vault.entity';
 import { Deposit, DepositStatus } from '../database/entities/deposit.entity';
+import { Withdrawal, WithdrawalStatus } from '../database/entities/withdrawal.entity';
 import { DepositDto } from './dto/deposit.dto';
 import {
   DepositVaultResponseDto,
@@ -24,6 +25,8 @@ export class VaultsService {
     private vaultRepository: Repository<Vault>,
     @InjectRepository(Deposit)
     private depositRepository: Repository<Deposit>,
+    @InjectRepository(Withdrawal)
+    private withdrawalRepository: Repository<Withdrawal>,
     private dataSource: DataSource,
     private notificationsService: NotificationsService,
   ) {}
@@ -239,6 +242,88 @@ export class VaultsService {
       isPublic: vault.isPublic,
       createdAt: vault.createdAt,
       updatedAt: vault.updatedAt,
+    };
+  }
+
+  /**
+   * Process withdrawal from vault
+   */
+  async withdrawFromVault(
+    vaultId: string,
+    userId: string,
+    amount: number,
+  ): Promise<{ withdrawal: Withdrawal; vault: VaultResponseDto }> {
+    // Validate amount
+    if (amount <= 0) {
+      throw new BadRequestException('Withdrawal amount must be greater than 0');
+    }
+
+    // Get vault and validate
+    const vault = await this.getVaultById(vaultId);
+
+    // Check if user has enough balance (simplified check)
+    // In a real app, we'd check the user's specific deposit history for this vault
+    const userTotalDeposits = await this.getUserTotalDeposits(userId);
+    if (amount > userTotalDeposits) {
+      throw new BadRequestException('Insufficient balance for withdrawal');
+    }
+
+    // Create withdrawal record
+    const withdrawal = this.withdrawalRepository.create({
+      userId,
+      vaultId,
+      amount,
+      status: WithdrawalStatus.PENDING,
+    });
+
+    // Use transaction for atomic updates
+    const result = await this.dataSource.transaction(async (manager) => {
+      // Save withdrawal
+      const savedWithdrawal = await manager.save(withdrawal);
+
+      // Update vault total deposits (decrement)
+      await manager.decrement(Vault, { id: vaultId }, 'totalDeposits', amount);
+
+      // Get updated vault
+      const updatedVault = await manager.findOne(Vault, {
+        where: { id: vaultId },
+      });
+
+      // Update status if it was FULL_CAPACITY
+      if (updatedVault && updatedVault.status === VaultStatus.FULL_CAPACITY) {
+        await manager.update(Vault, { id: vaultId }, { status: VaultStatus.ACTIVE });
+        updatedVault.status = VaultStatus.ACTIVE;
+      }
+
+      return { withdrawal: savedWithdrawal, vault: updatedVault };
+    });
+
+    // Mock confirmation
+    await this.withdrawalRepository.update(result.withdrawal.id, {
+      status: WithdrawalStatus.CONFIRMED,
+      confirmedAt: new Date(),
+      transactionHash: `mock_withdraw_tx_${Date.now()}`,
+    });
+
+    const confirmedWithdrawal = await this.withdrawalRepository.findOne({
+      where: { id: result.withdrawal.id },
+    });
+
+    if (!confirmedWithdrawal) {
+      throw new NotFoundException('Withdrawal not found after confirmation');
+    }
+
+    // Trigger notification
+    await this.notificationsService.create({
+      userId,
+      title: 'Withdrawal Confirmed',
+      message: `Your withdrawal of ${amount} from vault ${vault.vaultName} has been confirmed.`,
+      type: NotificationType.DEPOSIT, // Using DEPOSIT type as a proxy for transaction notifications
+    });
+
+    return {
+      withdrawal: confirmedWithdrawal,
+      vault: result.vault ? this.mapVaultToResponse(result.vault) : this.mapVaultToResponse(vault),
     };
   }
 

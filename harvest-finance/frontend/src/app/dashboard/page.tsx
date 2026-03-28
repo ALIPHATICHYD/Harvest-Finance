@@ -1,12 +1,34 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { VaultOverview } from "@/components/dashboard/VaultOverview";
+import { SeasonalTipsList, MilestoneNotification } from "@/components/seasonal-tips";
+import { AIAssistantChat } from "@/components/ai-assistant";
+import { useAIAssistantStore } from "@/hooks/useAIAssistant";
 import { TrendingUp, Wallet, ArrowRight } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { useSeasonalTipsStore } from "@/hooks/useSeasonalTips";
 
 export default function DashboardPage() {
+  const { selectedCrop, selectedSeason, vaultProgress } = useSeasonalTipsStore();
+
+  const aiContext = {
+    selectedCrop,
+    currentSeason: selectedSeason,
+    vaultBalance: vaultProgress.vaultBalance,
+    vaultTarget: vaultProgress.vaultTarget,
+    progressPercent: vaultProgress.progressPercent,
+    currentMilestone: vaultProgress.milestoneReached || undefined,
+  };
+
+  const openChat = useAIAssistantStore((s) => s.openChat);
+
+  useEffect(() => {
+    // Auto-open the AI Assistant when on the dashboard for visibility
+    openChat();
+  }, [openChat]);
+
   return (
     <div className="space-y-8 pb-10">
       {/* Dashboard Header */}
@@ -25,6 +47,9 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Milestone Notifications */}
+      <MilestoneNotification />
 
       {/* Quick Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -69,10 +94,18 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Seasonal Tips Section */}
+      <div className="pt-4 border-t border-gray-200">
+        <SeasonalTipsList showFilters={true} />
+      </div>
+
       {/* Main Content Sections */}
       <div className="pt-4 border-t border-gray-200">
         <VaultOverview />
       </div>
+
+      {/* AI Assistant */}
+      <AIAssistantChat context={aiContext} />
     </div>
   );
 }

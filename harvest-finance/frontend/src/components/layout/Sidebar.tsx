@@ -17,6 +17,7 @@ export function Sidebar() {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Portfolio", href: "/portfolio", icon: Wallet },
+    { label: "Farm Vaults", href: "/dashboard/farm-vaults", icon: Sprout },
     { label: "Transactions", href: "/transactions", icon: ArrowRightLeft },
     { label: "Settings", href: "/settings", icon: Settings },
   ];

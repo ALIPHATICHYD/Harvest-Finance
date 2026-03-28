@@ -17,6 +17,9 @@ export { VaultDeposit } from './vault-deposit.entity';
 =======
 export { Vault, VaultType, VaultStatus } from './vault.entity';
 export { Deposit, DepositStatus } from './deposit.entity';
+export { Withdrawal, WithdrawalStatus } from './withdrawal.entity';
+export * from './crop-cycle.entity';
+export * from './farm-vault.entity';
 
 export { Achievement, AchievementType } from './achievement.entity';
 export { Reward, RewardStatus } from './reward.entity';
