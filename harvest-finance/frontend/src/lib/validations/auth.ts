@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // ─── Role Enum ───────────────────────────────────────────────
-export const UserRole = z.enum(['farmer', 'buyer', 'inspector']);
+export const UserRole = z.enum(['farmer', 'buyer', 'inspector', 'admin']);
 export type UserRole = z.infer<typeof UserRole>;
 
 // ─── Password Rules ──────────────────────────────────────────

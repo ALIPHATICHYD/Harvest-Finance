@@ -3,9 +3,16 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { CustomLoggerService } from './logger/custom-logger.service';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+  const customLogger = app.get(CustomLoggerService);
+  app.useLogger(customLogger);
+  app.useGlobalFilters(new HttpExceptionFilter(customLogger));
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

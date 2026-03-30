@@ -1,0 +1,22 @@
+
+> frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 25.0s
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/dashboard/farm-vaults/page.tsx:287:19
+Type error: Type '"outline"' is not assignable to type 'CardVariant | undefined'. Did you mean '"outlined"'?
+
+[0m [90m 285 |[39m
+ [90m 286 |[39m             {[90m/* Seasonal Info */[39m}
+[31m[1m>[22m[39m[90m 287 |[39m             [33m<[39m[33mCard[39m variant[33m=[39m[32m"outline"[39m className[33m=[39m[32m"bg-amber-50 border-amber-100"[39m[33m>[39m
+ [90m     |[39m                   [31m[1m^[22m[39m
+ [90m 288 |[39m               [33m<[39m[33mCardHeader[39m 
+ [90m 289 |[39m                 title[33m=[39m[32m"Seasonal Tips"[39m 
+ [90m 290 |[39m                 icon[33m=[39m{[33m<[39m[33mActivity[39m className[33m=[39m[32m"w-5 h-5 text-amber-600"[39m [33m/[39m[33m>[39m}[0m
+Next.js build worker exited with code: 1 and signal: null

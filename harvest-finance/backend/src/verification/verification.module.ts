@@ -16,9 +16,11 @@ import { Delivery } from './entities/delivery.entity';
 import { Approval } from './entities/approval.entity';
 import { InspectorAssignment } from './entities/inspector-assignment.entity';
 import { Notification } from './entities/notification.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       Verification,
       Delivery,

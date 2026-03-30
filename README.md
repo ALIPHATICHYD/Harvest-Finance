@@ -1,255 +1,100 @@
-# 🌾 Harvest Finance
+# <p align="center"><img src="harvest-finance/frontend/public/logo.png" width="80" height="80" alt="Harvest Finance Logo"> <br> 🌾 Harvest Finance</p>
 
-**Empowering smallholder farmers through blockchain-based supply chain financing on Stellar**
+<p align="center">
+  <b>Empowering smallholder farmers through blockchain-based supply chain financing on Stellar</b>
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Stellar](https://img.shields.io/badge/Stellar-XLM-blue)](https://stellar.org)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://stellar.org"><img src="https://img.shields.io/badge/Stellar-XLM-blue" alt="Stellar"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+  <a href="https://discord.gg/harvestfinance"><img src="https://img.shields.io/badge/Discord-Join%20Us-7289DA" alt="Discord"></a>
+</p>
 
-## 🎯 Problem Statement
+---
 
-Smallholder farmers globally face a **$1.5 trillion trade finance gap**. Traditional financing is:
-- ❌ Expensive (10-20% interest rates)
-- ❌ Slow (weeks to process)
-- ❌ Inaccessible (lack of credit history)
-- ❌ Risky for both farmers and buyers
+## 🎯 The Vision
 
-## 💡 Solution
+Harvest Finance addresses the **$1.5 trillion trade finance gap** for smallholder farmers. By leveraging the **Stellar blockchain**, we provide:
 
-Harvest Finance leverages **Stellar blockchain** to create a transparent, low-cost platform where:
+- ✅ **Pre-Funding**: Upfront capital at 60-80% for confirmed orders.
+- ✅ **Smart Escrow**: Automated, trustless payments via [Stellar Claimable Balances](https://developers.stellar.org/docs/glossary/claimable-balance/).
+- ✅ **Zero Hidden Fees**: Transaction costs under $0.00001 with 5s settlement.
+- ✅ **Reputation Scoring**: On-chain credit history built from real transaction data.
 
-✅ **Farmers** receive upfront capital for their crops  
-✅ **Buyers** secure their supply chain with guaranteed pricing  
-✅ **Payments** release automatically when delivery is verified  
-✅ **Everyone** benefits from <$0.00001 transaction fees and 3-5 second settlement
+---
 
-## 🚀 Key Features
+## 🏗️ Architecture Stack
 
-### For Farmers
-- 🌱 **Pre-Funding**: Get 60-80% upfront payment for confirmed orders
-- 💰 **Fair Pricing**: Lock in prices at planting time
-- 📈 **Credit Building**: Build on-chain reputation and credit score
-- 📱 **Mobile-First**: Simple interface in local languages
+### Core Technology
+- **Blockchain**: Stellar Network (Smart contracts, Escrow, Payments)
+- **Backend API**: NestJS (Node.js, TypeScript, PostgreSQL, TypeORM, Redis)
+- **Frontend**: Next.js 15 (React, TailwindCSS, Framer Motion)
+- **Wallet Integration**: Freighter API & Stellar SDK
 
-### For Buyers
-- 🛡️ **Supply Security**: Guarantee crop availability
-- 🔍 **Transparency**: Real-time tracking and verification
-- ⚡ **Instant Settlement**: Pay only when delivery is confirmed
-- 📊 **Risk Management**: Diversify across multiple farms
-
-### For the Platform
-- 🔐 **Smart Escrow**: Stellar claimable balances for conditional payments
-- 🤖 **Automated Verification**: IoT sensors + inspector validation
-- 🌍 **Multi-Currency**: Support for local currencies via Stellar anchors
-- 🔗 **Interoperable**: Works with existing agricultural systems
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Frontend (React)                     │
-│          Web Dashboard + Mobile App (React Native)      │
-└────────────────────┬────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│                  Backend API (Node.js)                   │
-│   Controllers │ Services │ Auth │ Webhooks │ Analytics  │
-└────────────────────┬────────────────────────────────────┘
-                     │
-         ┌───────────┴───────────┬──────────────┐
-         │                       │              │
-┌────────▼────────┐   ┌──────────▼─────┐   ┌───▼────────┐
-│  Stellar Node   │   │   PostgreSQL   │   │    IoT     │
-│  (Horizon API)  │   │   (Off-chain)  │   │  Oracles   │
-│                 │   │                │   │            │
-│ • Escrow        │   │ • User data    │   │ • Sensors  │
-│ • Payments      │   │ • Orders       │   │ • Photos   │
-│ • Tokens        │   │ • Metrics      │   │ • GPS      │
-└─────────────────┘   └────────────────┘   └────────────┘
-```
-
-## 🛠️ Tech Stack
-
-### Blockchain
-- **Stellar SDK** - Smart contracts and payments
-- **Horizon API** - Blockchain queries
-- **Freighter/Albedo** - Wallet integration
-
-### Backend
-- **Node.js + Express** - API server
-- **PostgreSQL** - Relational database
-- **Redis** - Caching and sessions
-- **JWT** - Authentication
-
-### Frontend
-- **React** - Web application
-- **React Native** - Mobile apps
-- **TailwindCSS** - Styling
-- **Redux Toolkit** - State management
-
-### DevOps
-- **Docker** - Containerization
-- **GitHub Actions** - CI/CD
-- **AWS/DigitalOcean** - Hosting
-
-## 📦 Project Structure
-
-```
+### Repository Structure
+```text
 harvest-finance/
-├── backend/              # Node.js API server
-│   ├── src/
-│   │   ├── controllers/  # Request handlers
-│   │   ├── models/       # Database models
-│   │   ├── routes/       # API routes
-│   │   ├── services/     # Business logic
-│   │   ├── middleware/   # Auth, validation
-│   │   └── config/       # Configuration
-│   └── tests/            # Backend tests
-├── frontend/             # React web app
-│   ├── src/
-│   │   ├── components/   # UI components
-│   │   ├── pages/        # Page components
-│   │   ├── hooks/        # Custom hooks
-│   │   └── services/     # API clients
-│   └── public/           # Static assets
-├── mobile/               # React Native app
-├── contracts/            # Stellar smart contracts
-│   ├── src/              # Contract logic
-│   └── tests/            # Contract tests
-├── docs/                 # Documentation
-│   ├── architecture/     # System design
-│   ├── api/              # API documentation
-│   └── user-guides/      # User manuals
-└── scripts/              # Deployment scripts
+├── backend/              # NestJS API & Database logic
+├── frontend/             # Next.js Dashboard & Mobile interfaces
+└── contracts/            # Smart contract logic & Soroban (Optional)
 ```
 
-## 🚀 Quick Start
+---
 
-### Prerequisites
-- Node.js 18+
+## 🚀 Quick Local Setup
+
+Ready to contribute? Get the project running in under 5 minutes:
+
+### 1. Prerequisites
+- Node.js 18+ & npm
 - PostgreSQL 14+
 - Redis 6+
-- Stellar testnet account
 
-### Installation
-
-1. **Clone the repository**
+### 2. Fast-Track Setup
 ```bash
-git clone https://github.com/yourusername/harvest-finance.git
-cd harvest-finance
-```
+# Clone the repository
+git clone https://github.com/code-flexing/Harvest-Finance.git
+cd Harvest-Finance
 
-2. **Install dependencies**
-```bash
-# Backend
-cd backend
-npm install
+# Setup Backend
+cd harvest-finance/backend
+npm install && cp .env.example .env
+npm run migration:run && npm run start:dev
 
-# Frontend
-cd ../frontend
-npm install
-```
-
-3. **Environment setup**
-```bash
-# Copy environment templates
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-
-# Edit with your credentials
-nano backend/.env
-```
-
-4. **Database setup**
-```bash
-cd backend
-npm run db:migrate
-npm run db:seed
-```
-
-5. **Run development servers**
-```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev
-
-# Terminal 2 - Frontend
-cd frontend
+# Setup Frontend (New Terminal)
+cd harvest-finance/frontend
+npm install && cp .env.example .env
 npm run dev
 ```
 
 Visit `http://localhost:3000` 🎉
 
-## 📚 Documentation
+---
 
-- [Architecture Overview](docs/architecture/README.md)
-- [API Documentation](docs/api/README.md)
-- [Smart Contract Guide](contracts/README.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [Contributing Guidelines](CONTRIBUTING.md)
+## 📚 Resources & Support
 
-## 🗺️ Roadmap
+- 🤝 **[Contributing Guide](CONTRIBUTING.md)** - Detailed setup, branch naming, and more.
+- 📖 **[Architecture Overview](docs/architecture/README.md)** - Deep dive into system design.
+- 📡 **[API Documentation](docs/api/README.md)** - Swagger/OpenAPI details.
+- 🐛 **[Report a Bug](https://github.com/code-flexing/Harvest-Finance/issues)** - Help us improve the platform.
 
-### Phase 1: MVP (Q1 2026)
-- [x] Basic escrow smart contracts
-- [x] Farmer/Buyer registration
-- [x] Simple order creation
-- [ ] Manual verification system
-- [ ] Pilot with 50-100 farmers
-
-### Phase 2: Automation (Q2 2026)
-- [ ] IoT sensor integration
-- [ ] Mobile inspector app
-- [ ] Automated payment triggers
-- [ ] Credit scoring algorithm
-- [ ] Expand to 500-1000 farmers
-
-### Phase 3: Scale (Q3-Q4 2026)
-- [ ] Multi-country expansion
-- [ ] Advanced IoT (drones, satellites)
-- [ ] Investor marketplace
-- [ ] Insurance integration
-- [ ] 10,000+ farmers
+---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions of all sizes! Whether it's fixing a typo, optimizing a database query, or adding a new feature.
 
-### How to Contribute
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. **Find an issue** labeled `good-first-issue`.
+2. **Comment** to claim the task.
+3. **Follow** the [Contribution Workflow](CONTRIBUTING.md).
+
+---
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🌟 Team
-
-- **Your Name** - Project Lead
-- Open for contributors!
-
-## 🙏 Acknowledgments
-
-- [Stellar Development Foundation](https://stellar.org) - Blockchain infrastructure
-- Agricultural cooperatives - Domain expertise
-- Open source community - Tools and libraries
-
-## 📞 Contact
-
-- **Website**: [Coming Soon]
-- **Email**: contact@harvestfinance.io
-- **Twitter**: [@HarvestFinance](https://twitter.com/harvestfinance)
-- **Discord**: [Join our community](https://discord.gg/harvestfinance)
-
-## 🔗 Links
-
-- [Stellar Documentation](https://developers.stellar.org/)
-- [Project Wiki](https://github.com/yourusername/harvest-finance/wiki)
-- [Bug Reports](https://github.com/yourusername/harvest-finance/issues)
-
 ---
 
-**Built with ❤️ for farmers worldwide**
+<p align="center"><b>Built with ❤️ for farmers worldwide 🌾</b></p>

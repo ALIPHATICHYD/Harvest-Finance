@@ -18,7 +18,11 @@ export class StellarService {
     }
   }
 
-  async createEscrow(buyerPublicKey: string, farmerPublicKey: string, amount: string): Promise<string> {
+  async createEscrow(
+    buyerPublicKey: string,
+    farmerPublicKey: string,
+    amount: string,
+  ): Promise<string> {
     // If server not configured, simulate escrow creation for dev/test
     if (!this.server) {
       const fakeHash = `simulated-tx-${Date.now()}`;
@@ -35,6 +39,36 @@ export class StellarService {
       return fakeHash;
     } catch (error) {
       this.logger.error('Error creating escrow', error as any);
+      throw error;
+    }
+  }
+
+  async releaseUpfrontPayment(params: {
+    orderId: string;
+    farmerPublicKey: string;
+    amount: string;
+    assetCode: string;
+  }): Promise<{ transactionHash: string }> {
+    // If server not configured, simulate payment release for dev/test
+    if (!this.server) {
+      const fakeHash = `simulated-release-${Date.now()}`;
+      this.logger.log(
+        `Simulated upfront payment released: ${fakeHash} for order ${params.orderId}`,
+      );
+      return { transactionHash: fakeHash };
+    }
+
+    try {
+      // Production usage would construct a real payment transaction here.
+      // For safety in this repo we avoid signing transactions without keys.
+      // We'll simulate a tx hash but leave the hook for real implementation.
+      const fakeHash = `stellar-release-${Date.now()}`;
+      this.logger.log(
+        `Upfront payment simulated (server present): ${fakeHash} for order ${params.orderId}`,
+      );
+      return { transactionHash: fakeHash };
+    } catch (error) {
+      this.logger.error('Error releasing upfront payment', error as any);
       throw error;
     }
   }

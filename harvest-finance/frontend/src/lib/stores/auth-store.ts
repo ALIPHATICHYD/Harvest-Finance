@@ -1,5 +1,6 @@
 'use client';
 
+import axios from 'axios';
 import { create } from 'zustand';
 import type { UserRole } from '@/lib/validations/auth';
 
@@ -22,13 +23,19 @@ interface AuthState {
 interface AuthActions {
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   clearError: () => void;
   hydrate: () => void;
 }
 
 type AuthStore = AuthState & AuthActions;
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
+function normalizeRole(role: string): UserRole {
+  return role.toLowerCase() as UserRole;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────
 const TOKEN_KEY = 'harvest_auth_token';
@@ -54,10 +61,6 @@ function loadFromStorage(): { token: string | null; user: User | null } {
   return { token, user };
 }
 
-// ─── Mock delay to simulate API ──────────────────────────────
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-// ─── Store ───────────────────────────────────────────────────
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   token: null,
@@ -68,27 +71,19 @@ export const useAuthStore = create<AuthStore>((set) => ({
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
-      await delay(1500); // simulate API call
-
-      // Mock validation
-      if (password.length < 8) {
-        throw new Error('Invalid credentials. Please try again.');
-      }
-
-      const mockToken = `jwt_${btoa(email)}_${Date.now()}`;
-      const mockUser: User = {
-        id: crypto.randomUUID(),
-        name: email.split('@')[0],
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
-        role: 'farmer',
-      };
+        password,
+      });
 
-      saveToStorage(mockToken, mockUser);
-      set({ user: mockUser, token: mockToken, isAuthenticated: true, isLoading: false });
-    } catch (err) {
+      const { access_token, user } = response.data;
+      const normalizedUser = { ...user, role: normalizeRole(user.role) };
+      saveToStorage(access_token, normalizedUser);
+      set({ user: normalizedUser, token: access_token, isAuthenticated: true, isLoading: false });
+    } catch (err: any) {
       set({
         isLoading: false,
-        error: err instanceof Error ? err.message : 'Login failed',
+        error: err.response?.data?.message || 'Login failed. Check your credentials.',
       });
     }
   },
@@ -96,35 +91,52 @@ export const useAuthStore = create<AuthStore>((set) => ({
   signup: async (name, email, password, role) => {
     set({ isLoading: true, error: null });
     try {
-      await delay(1500);
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
+        full_name: name,
+        email,
+        password,
+        role: role.toUpperCase(),
+      });
 
-      const mockToken = `jwt_${btoa(email)}_${Date.now()}`;
-      const mockUser: User = { id: crypto.randomUUID(), name, email, role };
-
-      saveToStorage(mockToken, mockUser);
-      set({ user: mockUser, token: mockToken, isAuthenticated: true, isLoading: false });
-    } catch (err) {
+      const { access_token, user } = response.data;
+      const normalizedUser = { ...user, role: normalizeRole(user.role) };
+      saveToStorage(access_token, normalizedUser);
+      set({ user: normalizedUser, token: access_token, isAuthenticated: true, isLoading: false });
+    } catch (err: any) {
       set({
         isLoading: false,
-        error: err instanceof Error ? err.message : 'Signup failed',
+        error: err.response?.data?.message || 'Signup failed. Please try again.',
       });
     }
   },
 
-  logout: () => {
-    clearStorage();
-    set({ user: null, token: null, isAuthenticated: false, error: null });
+  logout: async () => {
+    try {
+      const { token } = loadFromStorage();
+      if (token) {
+        await axios.post(
+          `${API_BASE_URL}/auth/logout`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+      }
+    } catch {
+      // ignore logout failures
+    } finally {
+      clearStorage();
+      set({ user: null, token: null, isAuthenticated: false, error: null });
+    }
   },
 
   forgotPassword: async (email) => {
     set({ isLoading: true, error: null });
     try {
-      await delay(1500);
+      await axios.post(`${API_BASE_URL}/auth/forgot-password`, { email });
       set({ isLoading: false });
-    } catch (err) {
+    } catch (err: any) {
       set({
         isLoading: false,
-        error: err instanceof Error ? err.message : 'Request failed',
+        error: err.response?.data?.message || 'Request failed. Please try again.',
       });
     }
   },
