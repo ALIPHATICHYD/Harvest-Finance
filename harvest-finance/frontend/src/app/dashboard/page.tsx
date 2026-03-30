@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { VaultOverview } from "@/components/dashboard/VaultOverview";
+import { WeatherWidget } from "@/components/dashboard/WeatherWidget";
 import { SeasonalTipsList, MilestoneNotification } from "@/components/seasonal-tips";
 import { AIAssistantChat } from "@/components/ai-assistant";
 import { useAIAssistantStore } from "@/hooks/useAIAssistant";
@@ -50,6 +51,9 @@ export default function DashboardPage() {
 
       {/* Milestone Notifications */}
       <MilestoneNotification />
+
+      {/* Weather Intelligence */}
+      <WeatherWidget />
 
       {/* Quick Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
