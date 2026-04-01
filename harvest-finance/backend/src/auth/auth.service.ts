@@ -13,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { randomBytes } from 'crypto';
+import { CustomLoggerService } from '../logger/custom-logger.service';
 import { User, UserRole } from '../database/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -34,6 +35,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private logger: CustomLoggerService,
   ) {}
 
   /**
@@ -48,6 +50,7 @@ export class AuthService {
     });
 
     if (existingUser) {
+      this.logger.warn(`Failed registration attempt: Email already exists (${email})`, 'AuthService');
       throw new ConflictException('User with this email already exists');
     }
 
@@ -76,6 +79,8 @@ export class AuthService {
 
     // Generate tokens
     const tokens = await this.generateTokens(user);
+
+    this.logger.log(`New user registered: ${email}`, 'AuthService');
 
     return {
       access_token: tokens.accessToken,
@@ -107,10 +112,12 @@ export class AuthService {
     });
 
     if (!user) {
+      this.logger.warn(`Failed login attempt for email: ${email}`, 'AuthService');
       throw new UnauthorizedException('Invalid credentials');
     }
 
     if (!user.isActive) {
+      this.logger.warn(`Login attempt for deactivated account: ${email}`, 'AuthService');
       throw new UnauthorizedException('Account is deactivated');
     }
 
@@ -118,6 +125,7 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      this.logger.warn(`Failed login attempt for email (invalid password): ${email}`, 'AuthService');
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -126,6 +134,8 @@ export class AuthService {
 
     // Generate tokens
     const tokens = await this.generateTokens(user);
+
+    this.logger.log(`User logged in successfully: ${email}`, 'AuthService');
 
     return {
       access_token: tokens.accessToken,
@@ -236,7 +246,7 @@ export class AuthService {
 
     // In production, send email with reset token
     // For now, we'll log it
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    this.logger.log(`Password reset token for ${email}: ${resetToken}`, 'AuthService');
 
     return {
       success: true,

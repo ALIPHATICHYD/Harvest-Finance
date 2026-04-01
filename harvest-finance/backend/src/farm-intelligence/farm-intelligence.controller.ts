@@ -4,18 +4,20 @@ import { SavingsProjectionService } from './services/savings-projection.service'
 import { BudgetRecommendationService } from './services/budget-recommendation.service';
 import { AlertsService } from './services/alerts.service';
 import { HistoricalAnalyticsService } from './services/historical-analytics.service';
+import { WeatherService } from './services/weather.service';
 
-@Controller('farm-intelligence')
-@UseGuards(JwtAuthGuard)
+@Controller('api/v1/farm-intelligence')
 export class FarmIntelligenceController {
   constructor(
     private readonly projectionService: SavingsProjectionService,
     private readonly budgetService: BudgetRecommendationService,
     private readonly alertsService: AlertsService,
     private readonly analyticsService: HistoricalAnalyticsService,
+    private readonly weatherService: WeatherService,
   ) {}
 
   @Get('projection')
+  @UseGuards(JwtAuthGuard)
   getProjection(
     @Query('userId') userId: string,
     @Query('months') months: string,
@@ -27,17 +29,33 @@ export class FarmIntelligenceController {
   }
 
   @Get('budget')
+  @UseGuards(JwtAuthGuard)
   getBudget(@Query('userId') userId: string) {
     return this.budgetService.getRecommendation(userId);
   }
 
   @Get('alerts')
+  @UseGuards(JwtAuthGuard)
   getAlerts(@Query('userId') userId: string) {
     return this.alertsService.getAlerts(userId);
   }
 
   @Get('analytics')
+  @UseGuards(JwtAuthGuard)
   getAnalytics(@Query('userId') userId: string) {
     return this.analyticsService.getAnalytics(userId);
+  }
+
+  @Get('weather')
+  getWeather(
+    @Query('latitude') latitude?: number,
+    @Query('longitude') longitude?: number,
+    @Query('location') location?: string,
+  ) {
+    return this.weatherService.getWeatherSummary({
+      latitude,
+      longitude,
+      location,
+    });
   }
 }

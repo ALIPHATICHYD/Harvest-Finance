@@ -21,6 +21,7 @@ export enum NotificationType {
   VAULT_CREATED = 'VAULT_CREATED',
   LARGE_TRANSACTION = 'LARGE_TRANSACTION',
   ERROR = 'ERROR',
+  INSURANCE = 'INSURANCE',
 }
 
 /**

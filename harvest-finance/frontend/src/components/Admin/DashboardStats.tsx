@@ -2,20 +2,34 @@
 
 import React from 'react';
 import { Card, CardBody, Stack, Inline } from '@/components/ui';
-import { Users, Landmark, Coins, TrendingUp, BarChart3 } from 'lucide-react';
+import { Users, UserPlus, Landmark, Coins, TrendingUp, BarChart3, ArrowDownLeft } from 'lucide-react';
 
 interface StatsProps {
   stats: {
+    totalUsers: number;
     totalDeposits: number;
     activeUsers: number;
     totalRewardsDistributed: number;
     activeVaults: number;
     averageApy: number;
+    totalWithdrawals?: number;
   };
 }
 
 export const DashboardStats: React.FC<StatsProps> = ({ stats }) => {
   const statItems = [
+    {
+      label: 'Total Users',
+      value: stats.totalUsers.toString(),
+      icon: <Users className="w-5 h-5 text-blue-600" />,
+      color: 'bg-blue-50',
+    },
+    {
+      label: 'Active Users',
+      value: stats.activeUsers.toString(),
+      icon: <UserPlus className="w-5 h-5 text-harvest-green-600" />,
+      color: 'bg-harvest-green-50',
+    },
     {
       label: 'Total Deposits',
       value: `$${stats.totalDeposits.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
@@ -23,10 +37,10 @@ export const DashboardStats: React.FC<StatsProps> = ({ stats }) => {
       color: 'bg-harvest-green-50',
     },
     {
-      label: 'Active Users',
-      value: stats.activeUsers.toString(),
-      icon: <Users className="w-5 h-5 text-blue-600" />,
-      color: 'bg-blue-50',
+      label: 'Total Withdrawals',
+      value: `$${(stats.totalWithdrawals ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      icon: <ArrowDownLeft className="w-5 h-5 text-red-500" />,
+      color: 'bg-red-50',
     },
     {
       label: 'Rewards Distributed',
@@ -49,7 +63,7 @@ export const DashboardStats: React.FC<StatsProps> = ({ stats }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {statItems.map((item, index) => (
         <Card key={index} className="border-none shadow-md hover:shadow-lg transition-all duration-300">
           <CardBody>

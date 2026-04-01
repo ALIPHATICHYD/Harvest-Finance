@@ -2,9 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
+import { CustomLoggerService } from '../logger/custom-logger.service';
 import { User, UserRole } from '../database/entities/user.entity';
 
 // Mock bcrypt
@@ -19,6 +24,7 @@ describe('AuthService', () => {
   let mockJwtService: any;
   let mockConfigService: any;
   let mockCacheManager: any;
+  let mockLogger: any;
 
   const mockUser: Partial<User> = {
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -64,6 +70,14 @@ describe('AuthService', () => {
       set: jest.fn(),
     };
 
+    mockLogger = {
+      log: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+    };
+
     // Reset mocks
     jest.clearAllMocks();
 
@@ -86,6 +100,10 @@ describe('AuthService', () => {
           provide: 'CACHE_MANAGER',
           useValue: mockCacheManager,
         },
+        {
+          provide: CustomLoggerService,
+          useValue: mockLogger,
+        },
       ],
     }).compile();
 
@@ -105,14 +123,25 @@ describe('AuthService', () => {
     it('should throw ConflictException if email already exists', async () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
 
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
+      await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should successfully register a new user', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
-      mockUserRepository.create.mockReturnValue({ ...mockUser, ...registerDto });
-      mockUserRepository.save.mockResolvedValue({ ...mockUser, ...registerDto, id: 'new-id' });
-      mockJwtService.signAsync.mockResolvedValueOnce('access_token').mockResolvedValueOnce('refresh_token');
+      mockUserRepository.create.mockReturnValue({
+        ...mockUser,
+        ...registerDto,
+      });
+      mockUserRepository.save.mockResolvedValue({
+        ...mockUser,
+        ...registerDto,
+        id: 'new-id',
+      });
+      mockJwtService.signAsync
+        .mockResolvedValueOnce('access_token')
+        .mockResolvedValueOnce('refresh_token');
 
       const result = await service.register(registerDto);
 
@@ -134,14 +163,18 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException if user not found', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should throw UnauthorizedException if password is invalid', async () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
       expect(bcrypt.compare).toHaveBeenCalled();
     });
 
@@ -151,7 +184,9 @@ describe('AuthService', () => {
       mockUserRepository.findOne.mockResolvedValue(userWithPassword);
       mockUserRepository.update.mockResolvedValue({ affected: 1 });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      mockJwtService.signAsync.mockResolvedValueOnce('access_token').mockResolvedValueOnce('refresh_token');
+      mockJwtService.signAsync
+        .mockResolvedValueOnce('access_token')
+        .mockResolvedValueOnce('refresh_token');
 
       const result = await service.login(loginDto);
 
@@ -170,11 +205,16 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException if token is invalid', async () => {
       mockJwtService.verifyAsync.mockRejectedValue(new Error('Invalid token'));
 
-      await expect(service.refresh(refreshTokenDto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refresh(refreshTokenDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should successfully refresh token', async () => {
-      mockJwtService.verifyAsync.mockResolvedValue({ sub: mockUser.id, email: mockUser.email });
+      mockJwtService.verifyAsync.mockResolvedValue({
+        sub: mockUser.id,
+        email: mockUser.email,
+      });
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockJwtService.signAsync.mockResolvedValue('new_access_token');
 
@@ -188,7 +228,9 @@ describe('AuthService', () => {
   describe('logout', () => {
     it('should blacklist the token', async () => {
       const token = 'valid_token';
-      mockJwtService.verifyAsync.mockResolvedValue({ exp: Math.floor(Date.now() / 1000) + 3600 });
+      mockJwtService.verifyAsync.mockResolvedValue({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      });
 
       const result = await service.logout(token);
 
@@ -230,7 +272,9 @@ describe('AuthService', () => {
     it('should throw BadRequestException if token is invalid', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.resetPassword(resetPasswordDto)).rejects.toThrow(BadRequestException);
+      await expect(service.resetPassword(resetPasswordDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should successfully reset password', async () => {

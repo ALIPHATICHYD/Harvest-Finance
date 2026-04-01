@@ -11,15 +11,16 @@ import {
   Sprout,
 } from "lucide-react";
 
+export const dashboardNavItems = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Portfolio", href: "/portfolio", icon: Wallet },
+  { label: "Farm Vaults", href: "/dashboard/farm-vaults", icon: Sprout },
+  { label: "Transactions", href: "/transactions", icon: ArrowRightLeft },
+  { label: "Settings", href: "/settings", icon: Settings },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
-
-  const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Portfolio", href: "/portfolio", icon: Wallet },
-    { label: "Transactions", href: "/transactions", icon: ArrowRightLeft },
-    { label: "Settings", href: "/settings", icon: Settings },
-  ];
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 h-screen sticky top-0 flex-col hidden md:flex z-10">
@@ -33,7 +34,7 @@ export function Sidebar() {
         </Link>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {dashboardNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (

@@ -8,6 +8,7 @@ import { SavingsProjectionService } from './services/savings-projection.service'
 import { BudgetRecommendationService } from './services/budget-recommendation.service';
 import { AlertsService } from './services/alerts.service';
 import { HistoricalAnalyticsService } from './services/historical-analytics.service';
+import { WeatherService } from './services/weather.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Vault, Deposit]), AuthModule],
@@ -17,7 +18,8 @@ import { HistoricalAnalyticsService } from './services/historical-analytics.serv
     BudgetRecommendationService,
     AlertsService,
     HistoricalAnalyticsService,
+    WeatherService,
   ],
-  exports: [AlertsService],
+  exports: [AlertsService, WeatherService],
 })
 export class FarmIntelligenceModule {}

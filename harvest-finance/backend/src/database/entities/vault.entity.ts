@@ -1,6 +1,4 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
@@ -10,18 +8,17 @@ import {
 import { VaultDeposit } from './vault-deposit.entity';
 
 @Entity('vaults')
-=======
+  Entity,
   Index,
-  OneToMany,
-  ManyToOne,
   JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { User } from './user.entity';
 import { Deposit } from './deposit.entity';
+import { User } from './user.entity';
 
-/**
- * Vault types for different agricultural investment categories
- */
 export enum VaultType {
   CROP_PRODUCTION = 'CROP_PRODUCTION',
   EQUIPMENT_FINANCING = 'EQUIPMENT_FINANCING',
@@ -30,9 +27,6 @@ export enum VaultType {
   EMERGENCY_FUND = 'EMERGENCY_FUND',
 }
 
-/**
- * Vault status
- */
 export enum VaultStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
@@ -40,13 +34,6 @@ export enum VaultStatus {
   FULL_CAPACITY = 'FULL_CAPACITY',
 }
 
-/**
- * Vault entity representing agricultural investment vaults
- * 
- * Relationships:
- * - One Vault belongs to one User (owner)
- * - One Vault can have many Deposits
- */
 @Entity('vaults')
 @Index('idx_vaults_owner', ['ownerId'])
 @Index('idx_vaults_type', ['type'])
@@ -138,34 +125,33 @@ export class Vault {
  feat/withdraw-api
   @OneToMany(() => VaultDeposit, deposit => deposit.vault)
   deposits: VaultDeposit[];
-=======
   // Relationships
   
   /** Owner of the vault */
+
   @ManyToOne(() => User, (user) => user.id, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'owner_id' })
   owner: User;
 
-  /** All deposits made to this vault */
   @OneToMany(() => Deposit, (deposit) => deposit.vault)
   deposits: Deposit[];
 
-  // Computed properties
-  
-  /** Calculate available capacity */
   get availableCapacity(): number {
     return Number(this.maxCapacity) - Number(this.totalDeposits);
   }
 
-  /** Calculate utilization percentage */
   get utilizationPercentage(): number {
-    if (Number(this.maxCapacity) === 0) return 0;
+    if (Number(this.maxCapacity) === 0) {
+      return 0;
+    }
+
     return (Number(this.totalDeposits) / Number(this.maxCapacity)) * 100;
   }
 
-  /** Check if vault is at full capacity */
   get isFullCapacity(): boolean {
     return Number(this.totalDeposits) >= Number(this.maxCapacity);
   }
 main
 }
+

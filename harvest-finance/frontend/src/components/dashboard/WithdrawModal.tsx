@@ -1,170 +1,149 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Modal, 
-  ModalHeader, 
-  ModalBody, 
-  ModalFooter, 
-  Button, 
-  Input, 
-  Stack, 
-  Inline,
-  Badge
-} from '@/components/ui';
-import { Wallet, ArrowDownLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Stack,
+  Badge,
+} from "@/components/ui";
+import { Wallet, ArrowDownLeft, AlertTriangle } from "lucide-react";
+import axios from "@/lib/api-client";
+import { useAuthStore } from "@/lib/stores/auth-store";
+import { enqueueOfflineAction } from "@/lib/offline-support";
 
 interface WithdrawModalProps {
   isOpen: boolean;
   onClose: () => void;
-  vault: {
-    id: string;
-    name: string;
-    asset: string;
-    balance: string;
-  } | null;
+  vault: any;
+  onSuccess?: () => void;
 }
 
-export const WithdrawModal: React.FC<WithdrawModalProps> = ({ isOpen, onClose, vault }) => {
-  const [amount, setAmount] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
+export const WithdrawModal: React.FC<WithdrawModalProps> = ({
+  isOpen,
+  onClose,
+  vault,
+  onSuccess,
+}) => {
+  const { token } = useAuthStore();
+  const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Reset state when modal opens/closes
-  useEffect(() => {
-    if (isOpen) {
-      setAmount('');
-      setError(null);
-      setIsLoading(false);
-      setIsSuccess(false);
+  const handleWithdraw = async () => {
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      setError("Please enter a valid amount");
+      return;
     }
-  }, [isOpen]);
 
-  if (!vault) return null;
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Only allow numbers and decimal point
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setAmount(value);
-      
-      const numAmount = parseFloat(value);
-      const balance = parseFloat(vault.balance);
-      
-      if (value !== '' && (isNaN(numAmount) || numAmount <= 0)) {
-        setError('Please enter a valid amount');
-      } else if (numAmount > balance) {
-        setError('Insufficient vault balance');
-      } else {
-        setError(null);
-      }
+    if (Number(amount) > vault.balance) {
+      setError("Insufficient balance in vault");
+      return;
     }
-  };
 
-  const handleMaxClick = () => {
-    setAmount(vault.balance);
-    setError(null);
-  };
-
-  const handleConfirm = async () => {
-    if (!amount || error) return;
-    
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsLoading(false);
-    setIsSuccess(true);
-    
-    // Auto close after success
-    setTimeout(() => {
+    setError(null);
+    try {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        enqueueOfflineAction({
+          type: "withdraw",
+          endpoint: `http://localhost:3001/api/v1/farm-vaults/${vault.id}/withdraw`,
+          payload: { amount: Number(amount) },
+        });
+        onSuccess?.();
+        onClose();
+        setAmount("");
+        return;
+      }
+
+      await axios.post(
+        `http://localhost:3001/api/v1/farm-vaults/${vault.id}/withdraw`,
+        { amount: Number(amount) },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      onSuccess?.();
       onClose();
-    }, 2000);
+      setAmount("");
+    } catch (err: any) {
+      console.error("Withdraw failed:", err);
+      setError(
+        err.response?.data?.message ||
+          "Withdrawal failed. Please check your connection.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const isEarlyWithrawal = (vault.projections?.progressPercentage || 0) < 100;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md" isCentered>
-      <ModalHeader title={`Withdraw from ${vault.name}`} />
-      
+    <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <ModalHeader title="Withdraw Funds" onClose={onClose} />
       <ModalBody>
-        {isSuccess ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="w-16 h-16 bg-harvest-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-10 h-10 text-harvest-green-600" />
+        <Stack gap="lg">
+          <div className="flex items-center justify-between rounded-xl border border-red-100 bg-red-50 p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-red-700">
+                From Vault
+              </p>
+              <h4 className="font-bold text-gray-900">{vault.name}</h4>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Withdrawal Successful!</h3>
-            <p className="text-gray-600">
-              You have successfully withdrawn {amount} {vault.asset} from the {vault.name}.
+            <Badge variant="error">
+              {vault.projections?.progressPercentage}% Season
+            </Badge>
+          </div>
+
+          <Input
+            label="Amount (USD)"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            leftIcon={<Wallet className="w-4 h-4 text-gray-400" />}
+            error={error || undefined}
+            type="number"
+            autoFocus
+          />
+
+          <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-500">
+            <p className="mb-1 flex justify-between">
+              <span>Available Balance:</span>
+              <span className="font-bold text-gray-900">${vault.balance}</span>
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              Offline withdrawals will stay queued locally until the platform
+              reconnects.
             </p>
           </div>
-        ) : (
-          <Stack gap="lg" className="py-2">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">Amount to Withdraw</label>
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={handleAmountChange}
-                  error={error || undefined}
-                  className="pr-20"
-                />
-                <button
-                  onClick={handleMaxClick}
-                  className="absolute right-3 top-[34px] text-xs font-bold text-harvest-green-600 hover:text-harvest-green-700 bg-harvest-green-50 px-2 py-1 rounded"
-                >
-                  MAX
-                </button>
-              </div>
+
+          {isEarlyWithrawal && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <p className="text-xs leading-relaxed text-amber-800">
+                <strong>Attention:</strong> Your crop cycle is not yet complete.
+                Early withdrawal may result in reduced seasonal dividends.
+              </p>
             </div>
-            
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-              <Stack gap="sm">
-                <Stack direction="row" justify="between">
-                  <span className="text-sm text-gray-500">Available Vault Balance</span>
-                  <span className="text-sm font-semibold">{vault.balance} {vault.asset}</span>
-                </Stack>
-                <div className="pt-2 border-t border-gray-200 mt-2">
-                  <Stack direction="row" justify="between">
-                    <span className="text-sm font-medium">Original Asset</span>
-                    <Badge variant="primary" size="sm" isPill>{vault.asset}</Badge>
-                  </Stack>
-                </div>
-              </Stack>
-            </div>
-            
-            {error && (
-              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
-                <AlertCircle className="w-4 h-4" />
-                <span>{error}</span>
-              </div>
-            )}
-            
-            <p className="text-xs text-center text-gray-400">
-              Withdrawals are processed instantly and returned to your connected wallet.
-            </p>
-          </Stack>
-        )}
+          )}
+        </Stack>
       </ModalBody>
-      
-      {!isSuccess && (
-        <ModalFooter>
-          <Button variant="outline" onClick={onClose} isDisabled={isLoading}>
-            Cancel
-          </Button>
-          <Button 
-            variant="primary" 
-            onClick={handleConfirm} 
-            isLoading={isLoading}
-            isDisabled={!!error || !amount}
-            className="px-8 bg-harvest-green-600 hover:bg-harvest-green-700 text-white"
-          >
-            Confirm Withdrawal
-          </Button>
-        </ModalFooter>
-      )}
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose} isDisabled={isLoading}>
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          onClick={handleWithdraw}
+          isLoading={isLoading}
+          leftIcon={<ArrowDownLeft className="w-4 h-4" />}
+        >
+          Confirm Withdrawal
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 };

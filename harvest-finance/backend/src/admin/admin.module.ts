@@ -6,10 +6,11 @@ import { Vault } from '../database/entities/vault.entity';
 import { Deposit } from '../database/entities/deposit.entity';
 import { User } from '../database/entities/user.entity';
 import { Reward } from '../database/entities/reward.entity';
+import { Withdrawal } from '../database/entities/withdrawal.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Vault, Deposit, User, Reward]),
+    TypeOrmModule.forFeature([Vault, Deposit, User, Reward, Withdrawal]),
   ],
   controllers: [AdminController],
   providers: [AdminService],

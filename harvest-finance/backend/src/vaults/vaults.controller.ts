@@ -39,11 +39,12 @@ import {
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { VaultsService } from './vaults.service';
 import { DepositDto } from './dto/deposit.dto';
-import { 
-  DepositVaultResponseDto, 
-  VaultResponseDto 
+import {
+  DepositVaultResponseDto,
+  VaultResponseDto,
 } from './dto/vault-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -58,6 +59,7 @@ export class VaultsController {
    * Deposit funds into a vault
    */
   @Post(':vaultId/deposit')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Deposit funds into a vault' })
   @ApiParam({
@@ -95,6 +97,50 @@ export class VaultsController {
     };
 
     return this.vaultsService.depositToVault(vaultId, secureDepositDto);
+  }
+
+  /**
+   * Withdraw funds from a vault
+   */
+  @Post(':vaultId/withdraw')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Withdraw funds from a vault' })
+  @ApiParam({
+    name: 'vaultId',
+    description: 'Vault ID (UUID)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        amount: { type: 'number', example: 100 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Withdrawal successful',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid amount or insufficient balance',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Vault not found',
+  })
+  async withdrawFromVault(
+    @Param('vaultId') vaultId: string,
+    @Body('amount') amount: number,
+    @Request() req: any,
+  ): Promise<any> {
+    return this.vaultsService.withdrawFromVault(vaultId, req.user.id, amount);
   }
 
   /**

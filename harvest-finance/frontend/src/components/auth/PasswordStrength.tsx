@@ -12,36 +12,34 @@ export function PasswordStrength({ password }: PasswordStrengthProps) {
   if (!password) return null;
 
   const colors = [
-    'bg-red-500',     // 0 - Weak
-    'bg-orange-500',  // 1 - Weak
-    'bg-yellow-500',  // 2 - Fair
-    'bg-green-500',   // 3 - Strong
-    'bg-emerald-500', // 4 - Very Strong
+    'bg-red-400',
+    'bg-amber-400',
+    'bg-lime-400',
+    'bg-green-500',
+    'bg-emerald-500',
   ];
 
   const textColors = [
     'text-red-500',
-    'text-orange-500',
-    'text-yellow-500',
-    'text-green-500',
-    'text-emerald-500',
+    'text-amber-500',
+    'text-lime-600',
+    'text-green-600',
+    'text-emerald-600',
   ];
 
   return (
-    <div className="mt-2 space-y-1.5" aria-live="polite" role="status">
-      <div className="flex gap-1.5">
+    <div className="mt-3 space-y-2" aria-live="polite" role="status">
+      <div className="flex gap-2">
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-              i < score ? colors[score] : 'bg-gray-200 dark:bg-gray-700'
+            className={`h-2 flex-1 rounded-full transition-all duration-300 ${
+              i < score ? colors[score] : 'bg-slate-200'
             }`}
           />
         ))}
       </div>
-      <p className={`text-xs font-medium ${textColors[score]}`}>
-        {label}
-      </p>
+      <p className={`text-xs font-medium ${textColors[score]}`}>{label}</p>
     </div>
   );
 }
