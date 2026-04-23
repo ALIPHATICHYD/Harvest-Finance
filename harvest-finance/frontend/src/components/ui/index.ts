@@ -44,6 +44,9 @@ export {
   TableCaption,
 } from './Table';
 
+export { Alert } from './Alert';
+export type { AlertProps, AlertVariant } from './Alert';
+
 // ============================================
 // Design Tokens
 // ============================================
