@@ -24,7 +24,7 @@ export type { InputProps, TextareaProps } from './Input';
 export { Modal, ModalHeader, ModalBody, ModalFooter } from './Modal';
 export type { ModalProps, ModalHeaderProps, ModalBodyProps, ModalFooterProps } from './Modal';
 
-export { Badge, StatusBadge } from './Badge';
+export { Badge, StatusBadge, StrategyBadge } from './Badge';
 export type { BadgeProps } from './Badge';
 
 export { Container, Section, Stack, Inline } from './Container';
@@ -43,6 +43,9 @@ export {
   TableCell,
   TableCaption,
 } from './Table';
+
+export { Alert } from './Alert';
+export type { AlertProps, AlertVariant } from './Alert';
 
 // ============================================
 // Design Tokens

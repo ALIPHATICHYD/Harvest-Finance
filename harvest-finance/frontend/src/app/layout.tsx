@@ -30,10 +30,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-          {children}
-          <MilestoneToastContainer />
-        </ThemeProvider>
+<ThemeProvider>
+  <a href="#main-content" className="skip-link">
+    Skip to main content
+  </a>
+  {children}
+  <MilestoneToastContainer />
+</ThemeProvider>
       </body>
     </html>
   );

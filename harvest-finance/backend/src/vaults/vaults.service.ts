@@ -1,82 +1,7 @@
- feat/withdraw-api
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Vault, VaultDeposit, User } from '../database/entities';
-import { WithdrawDto } from './dto/withdraw.dto';
-
-@Injectable()
-export class VaultsService {
-  private readonly logger = new Logger(VaultsService.name);
-
-  constructor(
-    @InjectRepository(Vault)
-    private readonly vaultRepository: Repository<Vault>,
-    @InjectRepository(VaultDeposit)
-    private readonly vaultDepositRepository: Repository<VaultDeposit>,
-    private readonly dataSource: DataSource,
-  ) {}
-
-  async withdraw(vaultId: string, withdrawDto: WithdrawDto) {
-    const { userId, amount } = withdrawDto;
-
-    return await this.dataSource.transaction(async (transactionalEntityManager) => {
-      // 1. Fetch vault and validate liquidity
-      const vault = await transactionalEntityManager.findOne(Vault, {
-        where: { id: vaultId },
-        lock: { mode: 'pessimistic_write' }, // Lock vault to prevent concurrent balance issues
-      });
-
-      if (!vault) {
-        throw new NotFoundException(`Vault with ID ${vaultId} not found`);
-      }
-
-      if (Number(vault.liquidity) < amount) {
-        throw new BadRequestException('Insufficient vault liquidity');
-      }
-
-      // 2. Fetch user's deposit and validate balance
-      const userDeposit = await transactionalEntityManager.findOne(VaultDeposit, {
-        where: { 
-          vault: { id: vaultId },
-          user: { id: userId }
-        },
-        relations: ['user', 'vault'],
-        lock: { mode: 'pessimistic_write' }, // Lock user deposit
-      });
-
-      if (!userDeposit) {
-        throw new NotFoundException('User has no deposit in this vault');
-      }
-
-      if (Number(userDeposit.balance) < amount) {
-        throw new BadRequestException('Insufficient user balance');
-      }
-
-      // 3. Perform updates
-      userDeposit.balance = Number(userDeposit.balance) - amount;
-      vault.totalDeposits = Number(vault.totalDeposits) - amount;
-      vault.liquidity = Number(vault.liquidity) - amount;
-
-      // 4. Save changes
-      await transactionalEntityManager.save(VaultDeposit, userDeposit);
-      const updatedVault = await transactionalEntityManager.save(Vault, vault);
-
-      this.logger.log(
-        `Withdrawal successful: User ${userId} withdrew ${amount} from Vault ${vaultId}`,
-      );
-
-      return {
-        vault: updatedVault,
-        userBalance: userDeposit.balance,
-      };
-    });
-=======
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -109,9 +34,6 @@ export class VaultsService {
     private vaultGateway: VaultGateway,
   ) {}
 
-  /**
-   * Get vault by ID with full details
-   */
   async getVaultById(vaultId: string): Promise<Vault> {
     const vault = await this.vaultRepository.findOne({
       where: { id: vaultId },
@@ -125,29 +47,22 @@ export class VaultsService {
     return vault;
   }
 
-  /**
-   * Process deposit into vault
-   */
   async depositToVault(
     vaultId: string,
     depositDto: DepositDto,
   ): Promise<DepositVaultResponseDto> {
     const { userId, amount } = depositDto;
 
-    // Validate amount
     if (amount <= 0) {
       throw new BadRequestException('Deposit amount must be greater than 0');
     }
 
-    // Get vault and validate
     const vault = await this.getVaultById(vaultId);
 
-    // Check vault status
     if (vault.status !== VaultStatus.ACTIVE) {
       throw new BadRequestException('Vault is not active for deposits');
     }
 
-    // Check vault capacity
     if (vault.isFullCapacity) {
       throw new BadRequestException('Vault has reached maximum capacity');
     }
@@ -158,26 +73,21 @@ export class VaultsService {
       );
     }
 
-    // Create deposit record
     const deposit = this.depositRepository.create({
       userId,
       vaultId,
       amount,
       status: DepositStatus.PENDING,
-      transactionHash: null, // Will be set by blockchain service
+      transactionHash: null,
       stellarTransactionId: null,
       confirmedAt: null,
     });
 
-    // Use transaction for atomic updates
     const result = await this.dataSource.transaction(async (manager) => {
-      // Save deposit
       const savedDeposit = await manager.save(deposit);
 
-      // Update vault total deposits
       await manager.increment(Vault, { id: vaultId }, 'totalDeposits', amount);
 
-      // Check if vault is now at full capacity
       const updatedVault = await manager.findOne(Vault, {
         where: { id: vaultId },
       });
@@ -186,16 +96,13 @@ export class VaultsService {
         await manager.update(
           Vault,
           { id: vaultId },
-          {
-            status: VaultStatus.FULL_CAPACITY,
-          },
+          { status: VaultStatus.FULL_CAPACITY },
         );
       }
 
       return { deposit: savedDeposit, vault: updatedVault };
     });
 
-    // Check for large deposit alert (e.g., > 10,000)
     if (amount >= 10000) {
       await this.notificationsService.create({
         title: 'Large Deposit Alert',
@@ -205,17 +112,12 @@ export class VaultsService {
       });
     }
 
-    // Mock blockchain confirmation for now
-    // In production, this would be handled by a blockchain service
     const confirmedDeposit = await this.confirmDeposit(result.deposit.id);
 
-    // Get user's total deposits
     const userTotalDeposits = await this.getUserTotalDeposits(userId);
 
-    // Map to response DTOs
     this.logger.log(`Deposit of ${amount} confirmed into vault ${vaultId} by user ${userId}`, 'VaultsService');
 
-    // Emit real-time event
     this.vaultGateway.emitDeposit({
       vaultId,
       vaultName: vault.vaultName,
@@ -231,9 +133,6 @@ export class VaultsService {
     };
   }
 
-  /**
-   * Confirm deposit (mock blockchain confirmation)
-   */
   private async confirmDeposit(depositId: string): Promise<Deposit> {
     const deposit = await this.depositRepository.findOne({
       where: { id: depositId },
@@ -243,7 +142,6 @@ export class VaultsService {
       throw new NotFoundException('Deposit not found');
     }
 
-    // Mock blockchain confirmation
     await this.depositRepository.update(depositId, {
       status: DepositStatus.CONFIRMED,
       confirmedAt: new Date(),
@@ -259,7 +157,6 @@ export class VaultsService {
       throw new NotFoundException('Deposit not found after confirmation');
     }
 
-    // Trigger notification for user
     await this.notificationsService.create({
       userId: updatedDeposit.userId,
       title: 'Deposit Confirmed',
@@ -270,9 +167,6 @@ export class VaultsService {
     return updatedDeposit;
   }
 
-  /**
-   * Get user's total deposits across all vaults
-   */
   async getUserTotalDeposits(userId: string): Promise<number> {
     const result = await this.depositRepository
       .createQueryBuilder('deposit')
@@ -284,9 +178,6 @@ export class VaultsService {
     return result?.total ? parseFloat(result.total) : 0;
   }
 
-  /**
-   * Get all vaults for a user
-   */
   async getUserVaults(userId: string): Promise<VaultResponseDto[]> {
     const vaults = await this.vaultRepository.find({
       where: { ownerId: userId },
@@ -297,9 +188,6 @@ export class VaultsService {
     return vaults.map((vault) => this.mapVaultToResponse(vault));
   }
 
-  /**
-   * Get all public vaults
-   */
   async getPublicVaults(): Promise<VaultResponseDto[]> {
     const vaults = await this.vaultRepository.find({
       where: { isPublic: true },
@@ -310,9 +198,6 @@ export class VaultsService {
     return vaults.map((vault) => this.mapVaultToResponse(vault));
   }
 
-  /**
-   * Map vault entity to response DTO
-   */
   mapVaultToResponse(vault: Vault): VaultResponseDto {
     return {
       id: vault.id,
@@ -334,30 +219,22 @@ export class VaultsService {
     };
   }
 
-  /**
-   * Process withdrawal from vault
-   */
   async withdrawFromVault(
     vaultId: string,
     userId: string,
     amount: number,
   ): Promise<{ withdrawal: Withdrawal; vault: VaultResponseDto }> {
-    // Validate amount
     if (amount <= 0) {
       throw new BadRequestException('Withdrawal amount must be greater than 0');
     }
 
-    // Get vault and validate
     const vault = await this.getVaultById(vaultId);
 
-    // Check if user has enough balance (simplified check)
-    // In a real app, we'd check the user's specific deposit history for this vault
     const userTotalDeposits = await this.getUserTotalDeposits(userId);
     if (amount > userTotalDeposits) {
       throw new BadRequestException('Insufficient balance for withdrawal');
     }
 
-    // Create withdrawal record
     const withdrawal = this.withdrawalRepository.create({
       userId,
       vaultId,
@@ -365,20 +242,15 @@ export class VaultsService {
       status: WithdrawalStatus.PENDING,
     });
 
-    // Use transaction for atomic updates
     const result = await this.dataSource.transaction(async (manager) => {
-      // Save withdrawal
       const savedWithdrawal = await manager.save(withdrawal);
 
-      // Update vault total deposits (decrement)
       await manager.decrement(Vault, { id: vaultId }, 'totalDeposits', amount);
 
-      // Get updated vault
       const updatedVault = await manager.findOne(Vault, {
         where: { id: vaultId },
       });
 
-      // Update status if it was FULL_CAPACITY
       if (updatedVault && updatedVault.status === VaultStatus.FULL_CAPACITY) {
         await manager.update(Vault, { id: vaultId }, { status: VaultStatus.ACTIVE });
         updatedVault.status = VaultStatus.ACTIVE;
@@ -387,7 +259,6 @@ export class VaultsService {
       return { withdrawal: savedWithdrawal, vault: updatedVault };
     });
 
-    // Mock confirmation
     await this.withdrawalRepository.update(result.withdrawal.id, {
       status: WithdrawalStatus.CONFIRMED,
       confirmedAt: new Date(),
@@ -402,17 +273,15 @@ export class VaultsService {
       throw new NotFoundException('Withdrawal not found after confirmation');
     }
 
-    // Trigger notification
     await this.notificationsService.create({
       userId,
       title: 'Withdrawal Confirmed',
       message: `Your withdrawal of ${amount} from vault ${vault.vaultName} has been confirmed.`,
-      type: NotificationType.DEPOSIT, // Using DEPOSIT type as a proxy for transaction notifications
+      type: NotificationType.DEPOSIT,
     });
 
     this.logger.log(`Withdrawal of ${amount} confirmed from vault ${vaultId} by user ${userId}`, 'VaultsService');
 
-    // Emit real-time event
     this.vaultGateway.emitWithdrawal({
       vaultId,
       vaultName: vault.vaultName,
@@ -427,9 +296,6 @@ export class VaultsService {
     };
   }
 
-  /**
-   * Map deposit entity to response DTO
-   */
   private mapDepositToResponse(deposit: Deposit): DepositResponseDto {
     return {
       id: deposit.id,
@@ -441,6 +307,5 @@ export class VaultsService {
       createdAt: deposit.createdAt,
       confirmedAt: deposit.confirmedAt,
     };
- main
   }
 }

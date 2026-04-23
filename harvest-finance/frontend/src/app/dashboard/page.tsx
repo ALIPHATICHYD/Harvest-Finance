@@ -233,25 +233,23 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-6 md:space-y-8 pb-6 md:pb-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <Badge variant="primary" className="mb-2">
+        <div className="space-y-2">
+          <Badge variant="primary" className="mb-2 w-fit">
             Farm Vault Dashboard
           </Badge>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white md:text-4xl">
-            Mobile-ready farming intelligence
-          </h1>
-          <p className="mt-2 max-w-3xl text-gray-600 dark:text-gray-400">
-            Track vault health, request crop suggestions, explore live regional
-            activity, and keep working even when the network drops.
-          </p>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white md:text-4xl">
+  Mobile-ready farming intelligence
+</h1>
+<p className="mt-2 max-w-3xl text-sm md:text-base text-gray-600 dark:text-gray-400">
         </div>
         <div className="flex flex-wrap gap-3">
           <Button
             variant="outline"
             leftIcon={<RefreshCcw className="h-4 w-4" />}
             onClick={syncQueuedActions}
+            className="text-sm"
           >
             Refresh sync
           </Button>
@@ -259,6 +257,7 @@ export default function DashboardPage() {
             variant="secondary"
             leftIcon={<Bot className="h-4 w-4" />}
             onClick={queueDepositDemo}
+            className="text-sm"
           >
             Queue demo deposit
           </Button>
@@ -280,12 +279,12 @@ export default function DashboardPage() {
         {quickActions.map((card) => {
           const Icon = card.icon;
           return (
-            <Card key={card.title} variant="default">
-              <CardBody className="space-y-4 p-5">
+            <Card key={card.title} variant="default" className="hover:shadow-md transition-shadow">
+              <CardBody className="space-y-4 p-4 md:p-5">
                 <div className="flex items-center justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-harvest-green-50 dark:bg-harvest-green-900/40 text-harvest-green-700 dark:text-harvest-green-300">
-                    <Icon className="h-5 w-5" />
-                  </div>
+                <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-full bg-harvest-green-50 dark:bg-harvest-green-900/40 text-harvest-green-700 dark:text-harvest-green-300">
+  <Icon className="h-4 w-4 md:h-5 md:w-5" />
+</div>
                   <Badge variant="success" size="sm" isPill>
                     Cached
                   </Badge>
@@ -294,8 +293,11 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     {card.title}
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+   <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                     {card.value}
+                  </p>
+                  <p className="text-xs md:text-sm text-gray-500 mt-1">
+                    {card.helper}
                   </p>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{card.helper}</p>
@@ -308,61 +310,75 @@ export default function DashboardPage() {
       <SeasonalTipsList showFilters />
       <CropRecommendationPanel isOnline={isOnline} />
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.95fr)]">
-        <FarmActivityMap />
-        <Card variant="default" className="h-fit">
-          <CardBody className="space-y-5 p-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Recent vault activity
-              </h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Cached locally so the latest dashboard view remains visible
-                offline.
-              </p>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.95fr)]">
+  <div className="space-y-6">
+    <FarmActivityMap />
+    <VaultOverview />
+  </div>
+  <div className="space-y-6">
+    <Card variant="default" className="h-fit">
+      <CardBody className="space-y-5 p-4 md:p-6">
+        <div>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+            Recent vault activity
+          </h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Cached locally so the latest dashboard view remains visible
+            offline.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {snapshot.recentTransactions.map((transaction) => (
+            <div
+              key={transaction.id}
+              className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-[rgba(141,187,85,0.15)] bg-gray-50 dark:bg-[#1a3020] px-3 md:px-4 py-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-gray-900 dark:text-white truncate">
+                  {transaction.type}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {new Date(transaction.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <div className="text-right ml-2">
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  ${transaction.amount}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {transaction.status}
+                </p>
+              </div>
             </div>
-            <div className="space-y-3">
-              {snapshot.recentTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-[rgba(141,187,85,0.15)] bg-gray-50 dark:bg-[#1a3020] px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {transaction.type}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(transaction.createdAt).toLocaleString('en-US')}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      ${transaction.amount}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {transaction.status}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-      </div>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
+  </div>
+</div>
 
-      <div className="pt-4 border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)]">
-        <VaultOverview />
-      </div>
+     {/* Additional Sections */}
+<div className="space-y-6">
+  <div className="border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)] pt-4">
+    <VaultOverview />
+  </div>
 
-      <div className="pt-4 border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)]">
-        <VaultActivityFeed />
-      </div>
+  <div className="border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)] pt-4">
+    <VaultActivityFeed />
+  </div>
 
-      {/* Crop Insurance */}
-      <div className="pt-4 border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)]">
-        <CropInsurancePanel />
-      </div>
+  <div className="border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)] pt-6">
+    <CropInsurancePanel />
+  </div>
 
+  <div className="border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)] pt-6">
+    <SeasonalTipsList showFilters />
+  </div>
+
+  <div className="border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)] pt-6">
+    <CropRecommendationPanel isOnline={isOnline} />
+  </div>
+</div>
       {/* AI Assistant */}
       <AIAssistantChat context={aiContext} />
     </div>

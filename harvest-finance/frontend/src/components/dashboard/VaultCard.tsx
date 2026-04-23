@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Card, CardHeader, CardBody, CardFooter, Button, Badge, Stack, Inline } from '@/components/ui';
+import { Card, CardHeader, CardBody, CardFooter, Button, Badge, Stack, Inline, StrategyBadge } from '@/components/ui';
 import { TrendingUp, Wallet, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { StrategyType } from '@/types/vault';
 
 export interface VaultProps {
   id: string;
@@ -13,6 +14,7 @@ export interface VaultProps {
   balance: string;
   walletBalance: string;
   icon: React.ReactNode;
+  strategyType?: StrategyType;
   onDeposit: (vaultId: string) => void;
   onWithdraw: (vaultId: string) => void;
 }
@@ -26,6 +28,7 @@ export const VaultCard: React.FC<VaultProps> = ({
   balance,
   walletBalance,
   icon,
+  strategyType,
   onDeposit,
   onWithdraw,
 }) => {
@@ -38,8 +41,9 @@ export const VaultCard: React.FC<VaultProps> = ({
               {icon}
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">{name}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{asset} Vault</p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-50">{name}</h3>
+              {strategyType && <StrategyBadge strategyType={strategyType} />}
+              <p className="text-sm text-gray-500 dark:text-zinc-400">{asset} Vault</p>
             </div>
           </div>
           <Badge variant="success" isPill className="bg-harvest-green-100 text-harvest-green-800 dark:bg-harvest-green-900/40 dark:text-harvest-green-300">

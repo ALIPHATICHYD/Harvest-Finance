@@ -11,6 +11,8 @@ import {
     FeeEstimate,
     AccountInfo,
     ReleaseUpfrontPaymentParams,
+    FeeBumpResult,
+    PriorityFeeInfo,
 } from '../interfaces/stellar.interfaces';
 
 @Injectable()
@@ -111,6 +113,22 @@ export class StellarService {
 
         transaction.sign(platformKeypair);
 
+        if (params.priorityFeeStroops) {
+            this.logger.log(`Using fee-bump for upfront payment | priorityFee=${params.priorityFeeStroops} stroops`);
+            const bumpResult = await this.submitWithFeeBump(
+                transaction.toXDR(),
+                this.platformSecretKey,
+                params.priorityFeeStroops
+            );
+            return {
+                transactionHash: bumpResult.innerTransactionHash,
+                status: 'success',
+                ledger: bumpResult.ledger,
+                createdAt: bumpResult.createdAt,
+                fee: bumpResult.feeCharged,
+            };
+        }
+
         try {
             const response = await this.server.submitTransaction(transaction);
             this.logger.log(`Upfront payment released | txHash=${response.hash}`);
@@ -178,6 +196,30 @@ export class StellarService {
         const platformKeypair = StellarSdk.Keypair.fromSecret(this.platformSecretKey);
         transaction.sign(platformKeypair);
 
+        if (params.priorityFeeStroops) {
+            this.logger.log(`Using fee-bump for escrow creation | priorityFee=${params.priorityFeeStroops} stroops`);
+            const bumpResult = await this.submitWithFeeBump(
+                transaction.toXDR(),
+                this.platformSecretKey,
+                params.priorityFeeStroops
+            );
+            const response = await this.server.transactions().transaction(bumpResult.feeBumpTransactionHash).call();
+            const balanceId = this.extractBalanceId(response as any);
+
+            return {
+                balanceId,
+                transactionHash: bumpResult.innerTransactionHash,
+                feeBumpTransactionHash: bumpResult.feeBumpTransactionHash,
+                createdAt: bumpResult.createdAt,
+                expiresAt: new Date(deadlineUnixTimestamp * 1000),
+                amount,
+                assetCode: assetCode ?? 'XLM',
+                farmerPublicKey,
+                buyerPublicKey,
+                orderId,
+            };
+        }
+
         try {
         const response = await this.server.submitTransaction(transaction);
         const balanceId = this.extractBalanceId(response);
@@ -231,6 +273,22 @@ export class StellarService {
 
         transaction.sign(farmerKeypair);
 
+        if (params.priorityFeeStroops) {
+            this.logger.log(`Using fee-bump for payment release | priorityFee=${params.priorityFeeStroops} stroops`);
+            const bumpResult = await this.submitWithFeeBump(
+                transaction.toXDR(),
+                this.platformSecretKey, // Platform pays the bump fee to ensure release
+                params.priorityFeeStroops
+            );
+            return {
+                transactionHash: bumpResult.innerTransactionHash,
+                status: 'success',
+                ledger: bumpResult.ledger,
+                createdAt: bumpResult.createdAt,
+                fee: bumpResult.feeCharged,
+            };
+        }
+
         try {
         const response = await this.server.submitTransaction(transaction);
         this.logger.log(`Payment released | txHash=${response.hash}`);
@@ -277,6 +335,22 @@ export class StellarService {
         .build();
 
         transaction.sign(buyerKeypair);
+
+        if (params.priorityFeeStroops) {
+            this.logger.log(`Using fee-bump for escrow refund | priorityFee=${params.priorityFeeStroops} stroops`);
+            const bumpResult = await this.submitWithFeeBump(
+                transaction.toXDR(),
+                this.platformSecretKey, // Platform pays the bump fee to ensure refund
+                params.priorityFeeStroops
+            );
+            return {
+                transactionHash: bumpResult.innerTransactionHash,
+                status: 'success',
+                ledger: bumpResult.ledger,
+                createdAt: bumpResult.createdAt,
+                fee: bumpResult.feeCharged,
+            };
+        }
 
         try {
         const response = await this.server.submitTransaction(transaction);
@@ -452,6 +526,87 @@ export class StellarService {
         }
     }
 
+    /**
+     * Fetches current network fee stats and recommends a priority fee at the given percentile.
+     */
+    async getRecommendedPriorityFee(percentile: number = 90): Promise<PriorityFeeInfo> {
+        try {
+            const stats = await this.server.feeStats();
+            const pStats = stats.fee_charged;
+            
+            let recommendedStroops = parseInt(pStats.mode, 10);
+            if (percentile <= 10) recommendedStroops = parseInt(pStats.p10, 10);
+            else if (percentile <= 20) recommendedStroops = parseInt(pStats.p20, 10);
+            else if (percentile <= 50) recommendedStroops = parseInt(pStats.p50, 10);
+            else if (percentile <= 75) recommendedStroops = parseInt(pStats.p75, 10);
+            else if (percentile <= 90) recommendedStroops = parseInt(pStats.p90, 10);
+            else recommendedStroops = parseInt(pStats.p99, 10);
+
+            // Add a 10% buffer to ensure it beats the exact percentile
+            recommendedStroops = Math.ceil(recommendedStroops * 1.1);
+
+            return {
+                feePerOperationStroops: recommendedStroops,
+                feePerOperationXlm: this.stroopsToXlm(recommendedStroops),
+                percentile,
+                networkStats: {
+                    p10: parseInt(pStats.p10, 10),
+                    p20: parseInt(pStats.p20, 10),
+                    p50: parseInt(pStats.p50, 10),
+                    p75: parseInt(pStats.p75, 10),
+                    p90: parseInt(pStats.p90, 10),
+                    p99: parseInt(pStats.p99, 10),
+                },
+            };
+        } catch (err) {
+            this.logger.warn('Could not fetch detailed fee stats, falling back to mode + 500 stroops');
+            const base = await this.getBaseFee();
+            const fallback = parseInt(base, 10) + 500;
+            return {
+                feePerOperationStroops: fallback,
+                feePerOperationXlm: this.stroopsToXlm(fallback),
+                percentile: 90,
+                networkStats: { p10: 100, p20: 100, p50: 100, p75: 100, p90: 100, p99: 100 },
+            };
+        }
+    }
+
+    /**
+     * Wraps a signed inner transaction in a fee-bump envelope.
+     */
+    async submitWithFeeBump(
+        innerTxXdr: string,
+        feeSourceSecret: string,
+        maxFeeStroops: string
+    ): Promise<FeeBumpResult> {
+        const feeSourceKeypair = StellarSdk.Keypair.fromSecret(feeSourceSecret);
+        const innerTx = StellarSdk.TransactionBuilder.fromXDR(innerTxXdr, this.networkPassphrase) as StellarSdk.Transaction;
+        
+        const feeBumpTx = StellarSdk.TransactionBuilder.buildFeeBumpTransaction(
+            feeSourceKeypair,
+            maxFeeStroops,
+            innerTx,
+            this.networkPassphrase
+        );
+
+        feeBumpTx.sign(feeSourceKeypair);
+
+        try {
+            const response = await this.server.submitTransaction(feeBumpTx);
+            this.logger.log(`Fee-bump transaction submitted | outerHash=${response.hash} innerHash=${innerTx.hash().toString('hex')}`);
+
+            return {
+                feeBumpTransactionHash: response.hash,
+                innerTransactionHash: innerTx.hash().toString('hex'),
+                feeCharged: this.stroopsToXlm(response.fee_charged),
+                ledger: response.ledger,
+                createdAt: new Date(),
+            };
+        } catch (err) {
+            this.handleStellarError(err, 'submitWithFeeBump');
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // PRIVATE HELPERS
     // ─────────────────────────────────────────────────────────────────────────────
@@ -478,14 +633,23 @@ export class StellarService {
 
     private extractBalanceId(response: StellarSdk.Horizon.HorizonApi.SubmitTransactionResponse): string {
         try {
-        const result = StellarSdk.xdr.TransactionResult.fromXDR(response.result_xdr, 'base64');
-        const opResult = result.result().results()[0];
-        const createBalanceResult = opResult.tr().createClaimableBalanceResult();
-        const balanceId = createBalanceResult.balanceId();
-        return balanceId.toXDR('hex');
+            const result = StellarSdk.xdr.TransactionResult.fromXDR(response.result_xdr, 'base64');
+            
+            // If it's a fee-bump transaction, we need to dig into the inner result
+            let results: StellarSdk.xdr.OperationResult[];
+            if (result.result().switch().value === StellarSdk.xdr.TransactionResultCode.txFeeBumpInnerSuccess().value) {
+                results = result.result().innerResultPair().result().result().results();
+            } else {
+                results = result.result().results();
+            }
+
+            const opResult = results[0];
+            const createBalanceResult = opResult.tr().createClaimableBalanceResult();
+            const balanceId = createBalanceResult.balanceId();
+            return balanceId.toXDR('hex');
         } catch (err) {
-        this.logger.error('Failed to extract balance ID from result XDR', err);
-        throw new InternalServerErrorException('Failed to extract escrow balance ID');
+            this.logger.error('Failed to extract balance ID from result XDR', err);
+            throw new InternalServerErrorException('Failed to extract escrow balance ID');
         }
     }
 

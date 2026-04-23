@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 
 export type RiskLevel = 'Low' | 'Medium' | 'High';
+export type StrategyType = 'Audited' | 'Community' | 'Experimental';
 
 export interface Vault {
   id: string;
@@ -14,6 +15,7 @@ export interface Vault {
   icon?: ReactNode;
   iconName?: string; // For dynamic loading or references
   seasonalTarget: number;
+  strategyType?: StrategyType;
   projections?: {
     progressPercentage: number;
   };

@@ -13,6 +13,7 @@ interface WalletState {
   address: string | null;
   isConnected: boolean;
   isConnecting: boolean;
+  isRefreshing: boolean;
   error: string | null;
   balances: TokenBalance[];
   totalValueUsd: number;
@@ -26,6 +27,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   address: null,
   isConnected: false,
   isConnecting: false,
+  isRefreshing: false,
   error: null,
   balances: [],
   totalValueUsd: 0,
@@ -76,6 +78,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       address: null,
       isConnected: false,
       isConnecting: false,
+      isRefreshing: false,
       error: null,
       balances: [],
       totalValueUsd: 0,
@@ -85,6 +88,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshBalances: async () => {
     const { address } = get();
     if (!address) return;
+
+    set({ isRefreshing: true });
 
     try {
       const mockBalances: TokenBalance[] = [
@@ -98,9 +103,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       set({
         balances: mockBalances,
         totalValueUsd: total,
+        isRefreshing: false,
       });
     } catch (err) {
-      console.error("Failed to fetch balances:", err);
+      set({ isRefreshing: false });
+      throw err;
     }
   },
 }));

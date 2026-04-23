@@ -1,0 +1,20 @@
+{
+  "name": "harvest-vault-contracts",
+  "version": "1.0.0",
+  "description": "Vault smart contracts with comprehensive fuzz tests",
+  "scripts": {
+    "test": "forge test",
+    "test:fuzz": "forge test --match-test testFuzz",
+    "test:invariant": "forge test --match-test invariant",
+    "test:edge": "forge test --match-test testFuzz_",
+    "test:verbose": "forge test -vv",
+    "test:vvv": "forge test -vvv",
+    "coverage": "forge coverage",
+    "gas-report": "forge test --gas-report",
+    "build": "forge build",
+    "clean": "forge clean",
+    "format": "forge fmt"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

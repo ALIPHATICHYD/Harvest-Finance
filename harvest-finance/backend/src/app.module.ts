@@ -5,14 +5,9 @@ import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AchievementsModule } from './achievements/achievements.module';
-import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
- feat/withdraw-api
-import { User, Order, Transaction, Verification, CreditScore, Vault, VaultDeposit } from './database/entities';
-=======
 import { UsersModule } from './users/users.module';
 import { VaultsModule } from './vaults/vaults.module';
 import { FarmIntelligenceModule } from './farm-intelligence/farm-intelligence.module';
@@ -24,10 +19,15 @@ import { ExportModule } from './export/export.module';
 import { FarmVaultsModule } from './farm-vaults/farm-vaults.module';
 import { InsuranceModule } from './insurance/insurance.module';
 import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
+import { LoggerMiddleware } from './logger/logger.middleware';
+import { LoggerModule } from './logger/logger.module';
+import { OrdersModule } from './orders/orders.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { VerificationModule } from './verification/verification.module';
 import {
   Achievement,
   CreditScore,
-  CropCycle,
   Deposit,
   FarmVault,
   Notification,
@@ -35,19 +35,15 @@ import {
   Reward,
   Transaction,
   User,
-  Verification,
   Vault,
   VaultDeposit,
+  Verification,
   Withdrawal,
-  CropCycle,
-  FarmVault,
-  InsurancePlan,
-  InsuranceSubscription,
 } from './database/entities';
- main
+import { CropCycle } from './database/entities/crop-cycle.entity';
+import { InsurancePlan } from './database/entities/insurance-plan.entity';
+import { InsuranceSubscription } from './database/entities/insurance-subscription.entity';
 import { CreateInitialSchema1700000000000 } from './database/migrations/1700000000000-CreateInitialSchema';
- feat/withdraw-api
-import { VaultsModule } from './vaults/vaults.module';
 import { CreateAchievements1700000000004 } from './database/migrations/1700000000004-CreateAchievements';
 import { CreateRewards1700000000005 } from './database/migrations/1700000000005-CreateRewards';
 import { CreateNotifications1700000000006 } from './database/migrations/1700000000006-CreateNotifications';
@@ -55,35 +51,13 @@ import { CreateWithdrawals1700000000007 } from './database/migrations/1700000000
 import { CreateFarmVaults1700000000008 } from './database/migrations/1700000000008-CreateFarmVaults';
 import { CreateInsurance1700000000009 } from './database/migrations/1700000000009-CreateInsurance';
 import { AddInsuranceNotificationType1700000000010 } from './database/migrations/1700000000010-AddInsuranceNotificationType';
-import { ExportModule } from './export/export.module';
-import { FarmIntelligenceModule } from './farm-intelligence/farm-intelligence.module';
-import { FarmVaultsModule } from './farm-vaults/farm-vaults.module';
-import { HealthModule } from './health/health.module';
-import { LoggerMiddleware } from './logger/logger.middleware';
-import { LoggerModule } from './logger/logger.module';
-import { NotificationsModule } from './notifications/notifications.module';
-import { OrdersModule } from './orders/orders.module';
-import { RealtimeModule } from './realtime/realtime.module';
-import { RewardsModule } from './rewards/rewards.module';
-import { UsersModule } from './users/users.module';
-import { VaultsModule } from './vaults/vaults.module';
-import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
-    AiQueryHistoryModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000,
-        limit: 100,
-      },
-    ]),
+    ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     TypeOrmModule.forRootAsync({
-      imports: [
-    AiQueryHistoryModule,ConfigModule],
+      imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
@@ -91,10 +65,6 @@ import { VerificationModule } from './verification/verification.module';
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
- feat/withdraw-api
-        entities: [User, Order, Transaction, Verification, CreditScore, Vault, VaultDeposit],
-        migrations: [CreateInitialSchema1700000000000],
-=======
         entities: [
           User,
           Order,
@@ -102,6 +72,7 @@ import { VerificationModule } from './verification/verification.module';
           Verification,
           CreditScore,
           Vault,
+          VaultDeposit,
           Deposit,
           Achievement,
           Reward,
@@ -111,11 +82,9 @@ import { VerificationModule } from './verification/verification.module';
           FarmVault,
           InsurancePlan,
           InsuranceSubscription,
-          VaultDeposit,
         ],
         migrations: [
           CreateInitialSchema1700000000000,
-          CreateVaultsAndDeposits1700000000003,
           CreateAchievements1700000000004,
           CreateRewards1700000000005,
           CreateNotifications1700000000006,
@@ -124,19 +93,13 @@ import { VerificationModule } from './verification/verification.module';
           CreateInsurance1700000000009,
           AddInsuranceNotificationType1700000000010,
         ],
-        synchronize: false, // Disable auto-sync, use migrations
-        migrationsRun: false, // Run migrations manually
         synchronize: false,
         migrationsRun: false,
         logging: configService.get<string>('NODE_ENV') === 'development',
       }),
       inject: [ConfigService],
     }),
-    CacheModule.register({
-      isGlobal: true,
-      ttl: 600,
-      max: 100,
-    }),
+    CacheModule.register({ isGlobal: true, ttl: 600, max: 100 }),
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
@@ -145,15 +108,11 @@ import { VerificationModule } from './verification/verification.module';
     OrdersModule,
     VerificationModule,
     DatabaseModule,
- feat/withdraw-api
-    VaultsModule,
-=======
     FarmIntelligenceModule,
     AchievementsModule,
     RewardsModule,
     NotificationsModule,
     AdminModule,
- main
     ExportModule,
     FarmVaultsModule,
     InsuranceModule,

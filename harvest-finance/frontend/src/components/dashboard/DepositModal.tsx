@@ -10,7 +10,9 @@ import {
   ModalFooter,
   ModalHeader,
   Stack,
+  Alert,
 } from "@/components/ui";
+import { parseStellarError } from "@/lib/errors/stellar-errors";
 import { enqueueOfflineAction } from "@/lib/offline-support";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import axios from "@/lib/api-client";
@@ -88,10 +90,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       setAmount("");
     } catch (err: any) {
       console.error("Deposit failed:", err);
-      setError(
-        err.response?.data?.message ||
-          "Deposit failed. Please check your connection.",
-      );
+      const parsed = parseStellarError(err);
+      setError(parsed.message);
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +114,15 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             </Badge>
 
           </div>
+
+          {error && (
+            <Alert 
+              variant="error" 
+              description={error} 
+              isClosable 
+              onClose={() => setError(null)} 
+            />
+          )}
 
           <Input
             label="Amount (USD)"

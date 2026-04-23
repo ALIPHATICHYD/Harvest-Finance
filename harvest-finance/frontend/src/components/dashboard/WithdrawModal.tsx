@@ -10,7 +10,9 @@ import {
   Input,
   Stack,
   Badge,
+  Alert,
 } from "@/components/ui";
+import { parseStellarError } from "@/lib/errors/stellar-errors";
 import { Wallet, ArrowDownLeft, AlertTriangle } from "lucide-react";
 import axios from "@/lib/api-client";
 import { useAuthStore } from "@/lib/stores/auth-store";
@@ -71,10 +73,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
       setAmount("");
     } catch (err: any) {
       console.error("Withdraw failed:", err);
-      setError(
-        err.response?.data?.message ||
-          "Withdrawal failed. Please check your connection.",
-      );
+      const parsed = parseStellarError(err);
+      setError(parsed.message);
     } finally {
       setIsLoading(false);
     }
@@ -99,6 +99,14 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             </Badge>
           </div>
 
+          {error && (
+            <Alert 
+              variant="error" 
+              description={error} 
+              isClosable 
+              onClose={() => setError(null)} 
+            />
+          )}
 
           <Input
             label="Amount (USD)"
