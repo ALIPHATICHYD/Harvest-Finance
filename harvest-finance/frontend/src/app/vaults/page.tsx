@@ -30,6 +30,9 @@ const MOCK_VAULTS: Vault[] = [
     iconName: "Coins",
     seasonalTarget: 5000,
     strategyType: "Audited",
+    totalAssets: 12400000,
+    totalShares: 11800000,
+    shares: 1190,
   },
   {
     id: "2",
@@ -43,6 +46,8 @@ const MOCK_VAULTS: Vault[] = [
     iconName: "Zap",
     seasonalTarget: 10000,
     strategyType: "Community",
+    totalAssets: 8100000,
+    totalShares: 7900000,
   },
   {
     id: "3",
@@ -56,6 +61,9 @@ const MOCK_VAULTS: Vault[] = [
     iconName: "Leaf",
     seasonalTarget: 2000,
     strategyType: "Audited",
+    totalAssets: 4200000,
+    totalShares: 4050000,
+    shares: 433,
   },
   {
     id: "4",
@@ -69,6 +77,9 @@ const MOCK_VAULTS: Vault[] = [
     iconName: "Shield",
     seasonalTarget: 20000,
     strategyType: "Experimental",
+    totalAssets: 25900000,
+    totalShares: 25500000,
+    shares: 9845,
   },
 ];
 
