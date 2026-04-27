@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/Vault.sol";
 import "../src/MockERC20.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
  * @title VaultFuzzTest
@@ -24,10 +25,18 @@ contract VaultFuzzTest is Test {
 
     function setUp() public {
         // Deploy mock token with large initial supply
-        token = new MockERC20("Test Token", "TEST", type(uint128).max);
+        token = new MockERC20("Test Token", "TEST", 18);
         
-        // Deploy vault
-        vault = new Vault(token, "Vault Token", "vTEST", address(this));
+        // Deploy vault implementation
+        Vault implementation = new Vault();
+        
+        // Deploy proxy and initialize
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            abi.encodeWithSelector(Vault.initialize.selector, address(token), "Vault Token", "vTEST", address(this))
+        );
+        
+        vault = Vault(address(proxy));
         
         // Mint tokens to users
         token.mint(user1, 1e26);

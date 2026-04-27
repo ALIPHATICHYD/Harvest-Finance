@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-yet';
 import { SorobanEvent } from '../database/entities/soroban-event.entity';
 import { AuthModule } from '../auth/auth.module';
 import { SorobanController } from './soroban.controller';
@@ -11,6 +13,16 @@ import { SorobanIndexerService } from './soroban-indexer.service';
     ConfigModule,
     TypeOrmModule.forFeature([SorobanEvent]),
     AuthModule,
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (config: ConfigService) => ({
+        store: await redisStore({
+          url: config.get('REDIS_URL', 'redis://localhost:6379'),
+          ttl: parseInt(config.get('CACHE_TTL', '600'), 10),
+        }),
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [SorobanController],
   providers: [SorobanIndexerService],

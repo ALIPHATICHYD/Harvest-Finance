@@ -1,7 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import axios, { AxiosInstance } from 'axios';
 import {
@@ -49,6 +51,7 @@ export class SorobanIndexerService implements OnModuleInit {
     @InjectRepository(SorobanEvent)
     private readonly eventRepository: Repository<SorobanEvent>,
     private readonly config: ConfigService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {
     this.enabled = this.config.get<string>('SOROBAN_INDEXER_ENABLED', 'false') === 'true';
     const network = this.config.get<string>('STELLAR_NETWORK', 'testnet');
@@ -165,6 +168,12 @@ export class SorobanIndexerService implements OnModuleInit {
   }
 
   private async rpcCall<T>(method: string, params: unknown): Promise<T> {
+    const cacheKey = `soroban:rpc:${method}:${JSON.stringify(params)}`;
+    const cached = await this.cacheManager.get<T>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const { data } = await this.http.post('', {
       jsonrpc: '2.0',
       id: Date.now(),
@@ -176,7 +185,11 @@ export class SorobanIndexerService implements OnModuleInit {
         `Soroban RPC error: ${data.error.code} ${data.error.message ?? 'unknown'}`,
       );
     }
-    return data.result as T;
+
+    const result = data.result as T;
+    // Cache for 5 minutes by default
+    await this.cacheManager.set(cacheKey, result, 300 * 1000);
+    return result;
   }
 
   private toEntity(ev: RpcContractEvent): SorobanEvent {
