@@ -19,5 +19,8 @@ export interface Vault {
   projections?: {
     progressPercentage: number;
   };
+  shares?: number | string;   // User's current vault shares
+  totalAssets?: number;       // Total assets in vault (for share estimation)
+  totalShares?: number;       // Total shares issued (for share estimation)
 }
 
