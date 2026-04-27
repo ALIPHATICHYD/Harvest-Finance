@@ -17,11 +17,17 @@ import "./libraries/VaultLib.sol";
 contract Vault is IVault, ERC20, Ownable, ReentrancyGuard {
     using VaultLib for uint256;
     IERC20 public asset;
-    
+
     uint256 public totalAssets_;
-    
+
+    /// @notice Maximum total assets the vault is allowed to hold via `deposit`.
+    /// @dev Initialized to `type(uint256).max` (unlimited) to preserve the
+    ///      pre-cap deployment behaviour. Update via `setDepositCap`.
+    uint256 public depositCap;
+
     event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
     event Withdraw(address indexed caller, address indexed receiver, uint256 assets, uint256 shares);
+    event DepositCapUpdated(uint256 oldCap, uint256 newCap);
 
     // =========================================================
     // Roles
