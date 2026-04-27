@@ -15,6 +15,7 @@
     "clean": "forge clean",
     "format": "forge fmt"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.6"
+  }
 }

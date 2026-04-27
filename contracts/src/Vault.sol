@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * with share-based accounting.
  */
 contract Vault is ERC20, Ownable, ReentrancyGuard {
-    IERC20 public asset;
+    IERC20 public immutable asset;
     
     uint256 public totalAssets_;
     
@@ -21,9 +21,9 @@ contract Vault is ERC20, Ownable, ReentrancyGuard {
 
     constructor(
         IERC20 _asset,
-        string memory _name,
-        string memory _symbol
-    ) ERC20(_name, _symbol) {
+        string memory name_,
+        string memory symbol_
+    ) ERC20(name_, symbol_) {
         asset = _asset;
     }
 
@@ -39,13 +39,12 @@ contract Vault is ERC20, Ownable, ReentrancyGuard {
 
         shares = convertToShares(assets);
         
-        // Transfer assets from caller to vault
-        require(asset.transferFrom(msg.sender, address(this), assets), "Transfer failed");
-        
-        // Mint shares
+        // Effects
         _mint(receiver, shares);
-        
         totalAssets_ += assets;
+        
+        // Interactions
+        require(asset.transferFrom(msg.sender, address(this), assets), "Transfer failed");
         
         emit Deposit(msg.sender, receiver, assets, shares);
     }
@@ -54,13 +53,13 @@ contract Vault is ERC20, Ownable, ReentrancyGuard {
      * @dev Withdraw assets by burning shares
      * @param assets Amount of underlying assets to withdraw
      * @param receiver Address to receive the assets
-     * @param owner Address of the share owner
+     * @param tokenOwner Address of the share owner
      * @return shares Amount of shares burned
      */
     function withdraw(
         uint256 assets,
         address receiver,
-        address owner
+        address tokenOwner
     ) external nonReentrant returns (uint256 shares) {
         require(receiver != address(0), "Invalid receiver");
         require(assets > 0, "Assets must be greater than 0");
@@ -68,19 +67,18 @@ contract Vault is ERC20, Ownable, ReentrancyGuard {
         shares = convertToShares(assets);
         
         // Check allowance if caller is not owner
-        if (msg.sender != owner) {
-            uint256 allowed = allowance(owner, msg.sender);
+        if (msg.sender != tokenOwner) {
+            uint256 allowed = allowance(tokenOwner, msg.sender);
             require(allowed >= shares, "Insufficient allowance");
-            _approve(owner, msg.sender, allowed - shares);
+            _approve(tokenOwner, msg.sender, allowed - shares);
         }
 
-        // Burn shares
-        _burn(owner, shares);
-        
-        // Transfer assets to receiver
-        require(asset.transfer(receiver, assets), "Transfer failed");
-        
+        // Effects
+        _burn(tokenOwner, shares);
         totalAssets_ -= assets;
+        
+        // Interactions
+        require(asset.transfer(receiver, assets), "Transfer failed");
         
         emit Withdraw(msg.sender, receiver, assets, shares);
     }
@@ -89,13 +87,13 @@ contract Vault is ERC20, Ownable, ReentrancyGuard {
      * @dev Redeem shares for assets
      * @param shares Amount of shares to redeem
      * @param receiver Address to receive the assets
-     * @param owner Address of the share owner
+     * @param tokenOwner Address of the share owner
      * @return assets Amount of underlying assets received
      */
     function redeem(
         uint256 shares,
         address receiver,
-        address owner
+        address tokenOwner
     ) external nonReentrant returns (uint256 assets) {
         require(receiver != address(0), "Invalid receiver");
         require(shares > 0, "Shares must be greater than 0");
@@ -103,19 +101,18 @@ contract Vault is ERC20, Ownable, ReentrancyGuard {
         assets = convertToAssets(shares);
         
         // Check allowance if caller is not owner
-        if (msg.sender != owner) {
-            uint256 allowed = allowance(owner, msg.sender);
+        if (msg.sender != tokenOwner) {
+            uint256 allowed = allowance(tokenOwner, msg.sender);
             require(allowed >= shares, "Insufficient allowance");
-            _approve(owner, msg.sender, allowed - shares);
+            _approve(tokenOwner, msg.sender, allowed - shares);
         }
 
-        // Burn shares
-        _burn(owner, shares);
-        
-        // Transfer assets to receiver
-        require(asset.transfer(receiver, assets), "Transfer failed");
-        
+        // Effects
+        _burn(tokenOwner, shares);
         totalAssets_ -= assets;
+        
+        // Interactions
+        require(asset.transfer(receiver, assets), "Transfer failed");
         
         emit Withdraw(msg.sender, receiver, assets, shares);
     }
