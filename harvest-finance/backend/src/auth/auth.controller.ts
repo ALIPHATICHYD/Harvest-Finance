@@ -39,7 +39,7 @@ export class AuthController {
    * Register a new user
    */
   @Post('register')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ long: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({ type: RegisterDto })
@@ -64,7 +64,7 @@ export class AuthController {
    * Login user
    */
   @Post('login')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ long: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
   @ApiBody({ type: LoginDto })
@@ -126,7 +126,7 @@ export class AuthController {
    * Forgot password
    */
   @Post('forgot-password')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ long: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset' })
   @ApiBody({ type: ForgotPasswordDto })
@@ -144,7 +144,7 @@ export class AuthController {
    * Reset password
    */
   @Post('reset-password')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ long: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
   @ApiBody({ type: ResetPasswordDto })
