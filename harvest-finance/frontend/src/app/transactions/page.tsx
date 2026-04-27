@@ -16,6 +16,7 @@ import {
   Stack,
   Inline,
   ThemeToggle,
+  TransactionRowSkeleton,
 } from '@/components/ui';
 import { Download, ArrowRightLeft, Calendar, Tag, Coins, Info } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -33,6 +34,12 @@ const mockTransactions = [
 export default function TransactionsPage() {
   const { user, token } = useAuthStore();
   const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(t);
+  }, []);
 
   const handleExport = async (format: 'csv' | 'excel') => {
     if (!user) return;
@@ -115,7 +122,9 @@ export default function TransactionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockTransactions.map((tx) => (
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, i) => <TransactionRowSkeleton key={i} />)
+                : mockTransactions.map((tx) => (
                 <TableRow key={tx.id}>
                   <TableCell className="font-medium text-gray-900 dark:text-gray-200">
                     <div className="flex items-center gap-2">

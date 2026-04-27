@@ -17,7 +17,7 @@ contract VaultEdgeCaseFuzzTest is Test {
     
     function setUp() public {
         token = new MockERC20("Test Token", "TEST", type(uint128).max);
-        vault = new Vault(token, "Vault Token", "vTEST");
+        vault = new Vault(token, "Vault Token", "vTEST", address(this));
         
         token.mint(user, type(uint96).max);
         

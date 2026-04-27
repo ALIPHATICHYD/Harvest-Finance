@@ -75,8 +75,8 @@ Visit `http://localhost:3000` 🎉
 ## 📚 Resources & Support
 
 - 🤝 **[Contributing Guide](CONTRIBUTING.md)** - Detailed setup, branch naming, and more.
-- 📖 **[Architecture Overview](docs/architecture/README.md)** - Deep dive into system design.
-- 📡 **[API Documentation](docs/api/README.md)** - Swagger/OpenAPI details.
+- 📡 **[API Documentation](docs/api/README.md)** - All endpoints with request/response examples.
+- 📜 **[Contract Documentation](docs/contracts/README.md)** - Architecture, interfaces, and testing.
 - 🐛 **[Report a Bug](https://github.com/code-flexing/Harvest-Finance/issues)** - Help us improve the platform.
 
 ---

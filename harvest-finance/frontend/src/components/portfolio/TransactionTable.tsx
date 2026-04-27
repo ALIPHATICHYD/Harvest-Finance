@@ -9,7 +9,8 @@ import {
   Badge, 
   StatusBadge, 
   Button,
-  Input
+  Input,
+  TransactionRowSkeleton,
 } from '@/components/ui';
 import { Transaction, TransactionType } from '@/lib/mock-data';
 import { Search, ChevronDown } from 'lucide-react';
@@ -17,9 +18,10 @@ import { useTranslation } from 'react-i18next';
 
 interface TransactionTableProps {
   transactions: Transaction[];
+  isLoading?: boolean;
 }
 
-export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions }) => {
+export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions, isLoading = false }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<TransactionType | 'All'>('All');
@@ -79,6 +81,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
               </tr>
             </thead>
             <tbody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => <TransactionRowSkeleton key={i} />)
+              ) : (
               <AnimatePresence mode="popLayout">
                 {filteredTransactions.slice(0, visibleCount).map((tx) => (
                   <motion.tr
@@ -114,6 +119,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({ transactions
                   </motion.tr>
                 ))}
               </AnimatePresence>
+              )}
             </tbody>
           </table>
         </div>

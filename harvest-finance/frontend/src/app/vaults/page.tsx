@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Container, Section, Button, Inline, Stack, cn } from "@/components/ui";
+import { Container, Section, Button, Inline, Stack, cn, VaultCardSkeleton, VaultTableRowSkeleton } from "@/components/ui";
 import { DepositModal } from "@/components/dashboard/DepositModal";
 import { MilestoneConfetti } from "@/components/dashboard/MilestoneConfetti";
 import { ProgressBar } from "@/components/dashboard/ProgressBar";
@@ -30,6 +30,9 @@ const MOCK_VAULTS: Vault[] = [
     iconName: "Coins",
     seasonalTarget: 5000,
     strategyType: "Audited",
+    totalAssets: 12400000,
+    totalShares: 11800000,
+    shares: 1190,
   },
   {
     id: "2",
@@ -43,6 +46,8 @@ const MOCK_VAULTS: Vault[] = [
     iconName: "Zap",
     seasonalTarget: 10000,
     strategyType: "Community",
+    totalAssets: 8100000,
+    totalShares: 7900000,
   },
   {
     id: "3",
@@ -56,6 +61,9 @@ const MOCK_VAULTS: Vault[] = [
     iconName: "Leaf",
     seasonalTarget: 2000,
     strategyType: "Audited",
+    totalAssets: 4200000,
+    totalShares: 4050000,
+    shares: 433,
   },
   {
     id: "4",
@@ -69,6 +77,9 @@ const MOCK_VAULTS: Vault[] = [
     iconName: "Shield",
     seasonalTarget: 20000,
     strategyType: "Experimental",
+    totalAssets: 25900000,
+    totalShares: 25500000,
+    shares: 9845,
   },
 ];
 
@@ -122,6 +133,7 @@ function VaultWithProgress({
 export default function VaultsPage() {
   const { t } = useTranslation();
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -190,6 +202,12 @@ export default function VaultsPage() {
     [vaultBalances, milestoneHooks],
   );
 
+
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(t);
+  }, []);
+
   const vaultsWithBalances = MOCK_VAULTS.map((vault) => {
     const balanceNum = vaultBalances[vault.id] ?? 0;
     return {
@@ -249,14 +267,24 @@ export default function VaultsPage() {
 
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {vaultsWithBalances.map((vault) => (
-                  <VaultWithProgress
-                    key={vault.id}
-                    vault={vault as any}
-                    onDeposit={handleDepositClick}
-                    onWithdraw={handleWithdrawClick}
-                  />
-                ))}
+                {isLoading
+                  ? Array.from({ length: 4 }).map((_, i) => <VaultCardSkeleton key={i} />)
+                  : vaultsWithBalances.map((vault) => (
+                      <VaultWithProgress
+                        key={vault.id}
+                        vault={vault as any}
+                        onDeposit={handleDepositClick}
+                        onWithdraw={handleWithdrawClick}
+                      />
+                    ))}
+              </div>
+            ) : isLoading ? (
+              <div className="rounded-xl border border-gray-100 bg-white overflow-hidden shadow-sm">
+                <table className="w-full">
+                  <tbody>
+                    {Array.from({ length: 4 }).map((_, i) => <VaultTableRowSkeleton key={i} />)}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <VaultTable 

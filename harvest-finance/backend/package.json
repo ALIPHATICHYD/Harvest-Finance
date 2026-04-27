@@ -28,6 +28,7 @@
     "seed:reset": "ts-node -r tsconfig-paths/register src/database/seed/seed.cli.ts reset"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1037.0",
     "@hookform/resolvers": "^5.2.2",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",

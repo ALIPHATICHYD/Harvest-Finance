@@ -27,7 +27,7 @@ contract VaultFuzzTest is Test {
         token = new MockERC20("Test Token", "TEST", type(uint128).max);
         
         // Deploy vault
-        vault = new Vault(token, "Vault Token", "vTEST");
+        vault = new Vault(token, "Vault Token", "vTEST", address(this));
         
         // Mint tokens to users
         token.mint(user1, 1e26);

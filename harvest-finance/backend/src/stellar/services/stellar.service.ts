@@ -1,11 +1,6 @@
-import {
-    Injectable,
-    Logger,
-    Optional,
-    BadRequestException,
-    InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SecretsService } from '../../common/secrets/secrets.service';
 import * as StellarSdk from 'stellar-sdk';
 import { CustomLoggerService } from '../../logger/custom-logger.service';
 import {
@@ -23,16 +18,16 @@ import {
 } from '../interfaces/stellar.interfaces';
 
 @Injectable()
-export class StellarService {
+export class StellarService implements OnModuleInit {
     private readonly logger = new Logger(StellarService.name);
     private readonly server: StellarSdk.Horizon.Server;
     private readonly networkPassphrase: string;
     private readonly platformPublicKey: string;
-    private readonly platformSecretKey: string;
+    private platformSecretKey: string;
 
     constructor(
         private readonly configService: ConfigService,
-        @Optional() private readonly structuredLogger?: CustomLoggerService,
+        private readonly secretsService: SecretsService,
     ) {
         const network = this.configService.get<string>('STELLAR_NETWORK', 'testnet');
 
@@ -47,7 +42,15 @@ export class StellarService {
         }
 
         this.platformPublicKey = this.configService.getOrThrow<string>('STELLAR_PLATFORM_PUBLIC_KEY');
-        this.platformSecretKey = this.configService.getOrThrow<string>('STELLAR_PLATFORM_SECRET_KEY');
+    }
+
+    async onModuleInit() {
+        const secret = await this.secretsService.getSecret('STELLAR_PLATFORM_SECRET_KEY');
+        if (!secret) {
+            this.logger.error('Failed to load STELLAR_PLATFORM_SECRET_KEY from secrets provider');
+            throw new InternalServerErrorException('Platform secret key configuration missing');
+        }
+        this.platformSecretKey = secret;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -598,9 +601,9 @@ export class StellarService {
         return {
             transactionHash,
             status: tx.successful ? 'success' : 'failed',
-            ledger: Number(tx.ledger),
-            createdAt: new Date(tx.created_at),
-            fee: this.stroopsToXlm(String(tx.fee_charged)),
+            ledger: tx.ledger_attr ? Number(tx.ledger_attr) : (typeof tx.ledger === 'number' || typeof tx.ledger === 'string' ? Number(tx.ledger) : 0),
+            createdAt: tx.created_at ? new Date(tx.created_at) : new Date(),
+            fee: this.stroopsToXlm(tx.fee_charged ? String(tx.fee_charged) : '0'),
             operations,
         };
         } catch (err) {
