@@ -83,3 +83,9 @@ export { cn, withPrefix } from './types';
 // ============================================
 
 export { ThemeToggle } from './ThemeToggle';
+
+// ============================================
+// Skeleton Loaders
+// ============================================
+
+export { Skeleton, VaultCardSkeleton, VaultTableRowSkeleton, TransactionRowSkeleton, MetricCardSkeleton } from './Skeleton';

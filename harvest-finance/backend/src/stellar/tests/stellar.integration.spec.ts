@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as StellarSdk from 'stellar-sdk';
 import { StellarService } from '../services/stellar.service';
+import { SecretsService } from '../../common/secrets/secrets.service';
 import { BadRequestException } from '@nestjs/common';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -61,9 +62,18 @@ describe('StellarService — Testnet Integration', () => {
             ],
             }),
         ],
-        providers: [StellarService],
+        providers: [
+            StellarService,
+            {
+                provide: SecretsService,
+                useValue: {
+                    getSecret: (key: string) => Promise.resolve(platformKeypair.secret()),
+                },
+            },
+        ],
         }).compile();
 
+        await module.init();
         service = module.get<StellarService>(StellarService);
     });
 

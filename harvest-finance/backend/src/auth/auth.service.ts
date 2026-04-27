@@ -21,6 +21,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthResponseDto, UserResponseDto, TokenResponseDto } from './dto/auth-response.dto';
+import { StellarChallengeDto, StellarVerifyDto, StellarAuthResponseDto, StellarChallengeResponseDto } from './dto/stellar-auth.dto';
 
 @Injectable()
 export class AuthService {

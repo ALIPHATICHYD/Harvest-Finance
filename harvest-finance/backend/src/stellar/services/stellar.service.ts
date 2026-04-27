@@ -1,6 +1,8 @@
-import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SecretsService } from '../../common/secrets/secrets.service';
 import * as StellarSdk from 'stellar-sdk';
+import { CustomLoggerService } from '../../logger/custom-logger.service';
 import {
     EscrowCreateParams,
     EscrowResult,
@@ -16,14 +18,17 @@ import {
 } from '../interfaces/stellar.interfaces';
 
 @Injectable()
-export class StellarService {
+export class StellarService implements OnModuleInit {
     private readonly logger = new Logger(StellarService.name);
     private readonly server: StellarSdk.Horizon.Server;
     private readonly networkPassphrase: string;
     private readonly platformPublicKey: string;
-    private readonly platformSecretKey: string;
+    private platformSecretKey: string;
 
-    constructor(private readonly configService: ConfigService) {
+    constructor(
+        private readonly configService: ConfigService,
+        private readonly secretsService: SecretsService,
+    ) {
         const network = this.configService.get<string>('STELLAR_NETWORK', 'testnet');
 
         if (network === 'mainnet') {
@@ -37,7 +42,15 @@ export class StellarService {
         }
 
         this.platformPublicKey = this.configService.getOrThrow<string>('STELLAR_PLATFORM_PUBLIC_KEY');
-        this.platformSecretKey = this.configService.getOrThrow<string>('STELLAR_PLATFORM_SECRET_KEY');
+    }
+
+    async onModuleInit() {
+        const secret = await this.secretsService.getSecret('STELLAR_PLATFORM_SECRET_KEY');
+        if (!secret) {
+            this.logger.error('Failed to load STELLAR_PLATFORM_SECRET_KEY from secrets provider');
+            throw new InternalServerErrorException('Platform secret key configuration missing');
+        }
+        this.platformSecretKey = secret;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -264,7 +277,7 @@ export class StellarService {
         }
 
         try {
-            const response = await this.server.submitTransaction(transaction);
+            const response = await this.submitWithRetry(transaction, 'releaseUpfrontPayment');
             this.logger.log(`Upfront payment released | txHash=${response.hash}`);
             return {
                 transactionHash: response.hash,
@@ -355,7 +368,7 @@ export class StellarService {
         }
 
         try {
-        const response = await this.server.submitTransaction(transaction);
+        const response = await this.submitWithRetry(transaction, 'createEscrow');
         const balanceId = this.extractBalanceId(response);
 
         this.logger.log(`Escrow created | balanceId=${balanceId} txHash=${response.hash}`);
@@ -424,7 +437,7 @@ export class StellarService {
         }
 
         try {
-        const response = await this.server.submitTransaction(transaction);
+        const response = await this.submitWithRetry(transaction, 'releasePayment');
         this.logger.log(`Payment released | txHash=${response.hash}`);
 
         return {
@@ -487,7 +500,7 @@ export class StellarService {
         }
 
         try {
-        const response = await this.server.submitTransaction(transaction);
+        const response = await this.submitWithRetry(transaction, 'refund');
         this.logger.log(`Refund processed | txHash=${response.hash}`);
 
         return {
@@ -553,7 +566,7 @@ export class StellarService {
         transaction.sign(sourceKeypair);
 
         try {
-        const response = await this.server.submitTransaction(transaction);
+        const response = await this.submitWithRetry(transaction, 'setupMultiSig');
         this.logger.log(`Multisig configured | txHash=${response.hash}`);
 
         return {
@@ -588,9 +601,9 @@ export class StellarService {
         return {
             transactionHash,
             status: tx.successful ? 'success' : 'failed',
-            ledger: Number(tx.ledger),
-            createdAt: new Date(tx.created_at),
-            fee: this.stroopsToXlm(String(tx.fee_charged)),
+            ledger: tx.ledger_attr ? Number(tx.ledger_attr) : (typeof tx.ledger === 'number' || typeof tx.ledger === 'string' ? Number(tx.ledger) : 0),
+            createdAt: tx.created_at ? new Date(tx.created_at) : new Date(),
+            fee: this.stroopsToXlm(tx.fee_charged ? String(tx.fee_charged) : '0'),
             operations,
         };
         } catch (err) {
@@ -726,7 +739,7 @@ export class StellarService {
         feeBumpTx.sign(feeSourceKeypair);
 
         try {
-            const response = await this.server.submitTransaction(feeBumpTx);
+            const response = await this.submitWithRetry(feeBumpTx, 'submitWithFeeBump');
             this.logger.log(`Fee-bump transaction submitted | outerHash=${response.hash} innerHash=${innerTx.hash().toString('hex')}`);
 
             return {
@@ -808,21 +821,52 @@ export class StellarService {
 
 
     private handleStellarError(err: any, context: string): never {
+        const status = err?.response?.status;
+
         if (err?.response?.data?.extras?.result_codes) {
-        const codes = err.response.data.extras.result_codes;
-        this.logger.error(`Stellar error in ${context}`, JSON.stringify(codes));
-        throw new BadRequestException(`Stellar transaction failed: ${JSON.stringify(codes)}`);
+            const resultCodes = err.response.data.extras.result_codes;
+            this.structuredLogger?.errorEvent(
+                'stellar_tx_failed',
+                {
+                    context,
+                    status,
+                    resultCodes,
+                    message: err?.message ?? 'unknown',
+                },
+                StellarService.name,
+            );
+            this.logger.error(
+                `Stellar error in ${context}`,
+                JSON.stringify(resultCodes),
+            );
+            throw new BadRequestException(
+                `Stellar transaction failed: ${JSON.stringify(resultCodes)}`,
+            );
         }
 
-        if (err?.response?.status === 404) {
-        throw new BadRequestException(`Stellar resource not found (context: ${context})`);
+        if (status === 404) {
+            throw new BadRequestException(
+                `Stellar resource not found (context: ${context})`,
+            );
         }
 
         if (err instanceof BadRequestException) {
-        throw err;
+            throw err;
         }
 
+        this.structuredLogger?.errorEvent(
+            'stellar_tx_failed',
+            {
+                context,
+                status,
+                message: err?.message ?? 'unknown',
+                kind: 'unexpected',
+            },
+            StellarService.name,
+        );
         this.logger.error(`Unexpected Stellar error in ${context}`, err);
-        throw new InternalServerErrorException(`Stellar network error in ${context}: ${err?.message ?? 'unknown'}`);
+        throw new InternalServerErrorException(
+            `Stellar network error in ${context}: ${err?.message ?? 'unknown'}`,
+        );
     }
 }

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import * as StellarSdk from 'stellar-sdk';
 import { StellarService } from '../services/stellar.service';
+import { SecretsService } from '../../common/secrets/secrets.service';
 import { FeeBumpScenario } from '../interfaces/stellar.interfaces';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -58,9 +59,18 @@ describe('StellarService — Fee-Bump & MEV Testing', () => {
                     ],
                 }),
             ],
-            providers: [StellarService],
+            providers: [
+                StellarService,
+                {
+                    provide: SecretsService,
+                    useValue: {
+                        getSecret: (key: string) => Promise.resolve(platformKeypair.secret()),
+                    },
+                },
+            ],
         }).compile();
 
+        await module.init();
         service = module.get<StellarService>(StellarService);
     });
 

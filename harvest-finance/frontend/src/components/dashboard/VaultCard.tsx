@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardBody, CardFooter, Button, Badge, Stack, Inline, StrategyBadge } from '@/components/ui';
 import { TrendingUp, Wallet, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { StrategyType } from '@/types/vault';
+import { formatI128 } from '@/lib/soroban-i128';
 
 export interface VaultProps {
   id: string;
@@ -17,6 +18,7 @@ export interface VaultProps {
   strategyType?: StrategyType;
   onDeposit: (vaultId: string) => void;
   onWithdraw: (vaultId: string) => void;
+  shares?: number | string;
 }
 
 export const VaultCard: React.FC<VaultProps> = ({
@@ -31,6 +33,7 @@ export const VaultCard: React.FC<VaultProps> = ({
   strategyType,
   onDeposit,
   onWithdraw,
+  shares,
 }) => {
   return (
     <Card hoverable className="h-full border border-gray-100 dark:border-[rgba(141,187,85,0.15)]">
@@ -66,6 +69,16 @@ export const VaultCard: React.FC<VaultProps> = ({
                 <span className="text-xs text-gray-400 dark:text-gray-500">{asset}</span>
               </div>
             </div>
+            {shares !== undefined && Number(shares) > 0 && (
+              <div className="p-3 bg-gray-50 dark:bg-[#1a3020] rounded-lg col-span-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold mb-1">My Shares</p>
+                <div className="flex items-baseline gap-1">
+                  <p className="text-base font-bold text-harvest-green-600 dark:text-harvest-green-400">
+                    {typeof shares === 'bigint' ? formatI128(shares) : shares}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">

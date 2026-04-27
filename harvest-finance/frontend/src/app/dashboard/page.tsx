@@ -13,7 +13,8 @@ import {
   Badge, 
   Button, 
   Card, 
-  CardBody 
+  CardBody,
+  MetricCardSkeleton,
 } from '@/components/ui';
 
 import { AIAssistantChat } from '@/components/ai-assistant';
@@ -57,139 +58,22 @@ const defaultTransactions = [
   },
 ];
 
-export default function DashboardPage() {
-  const openChat = useAIAssistantStore((state) => state.openChat);
-  const { token } = useAuthStore();
-  const { isOnline, isSyncing, queuedCount, sync, queueAction } = useSync();
-  const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | null>(null);
-
-  useEffect(() => {
-    openChat();
-  }, [openChat]);
-
-  useEffect(() => {
-    const snapshot = loadDashboardSnapshot();
-    setSnapshotUpdatedAt(snapshot?.updatedAt ?? null);
-  }, []);
-
-  const snapshot = useMemo(() => {
-    return (
-      loadDashboardSnapshot() ?? {
-        updatedAt: new Date().toISOString(),
-        vaultBalance: 18240,
-        totalDeposits: 14750,
-        totalRewards: 3490,
-        queuedActions: 0,
-        activeVaults: 4,
-        recentTransactions: defaultTransactions,
-      }
-    );
-  }, []);
-
-  useEffect(() => {
-    const updatedAt = new Date().toISOString();
-    saveDashboardSnapshot({
-      ...snapshot,
-      queuedActions: queuedCount,
-      updatedAt,
-    });
-    setSnapshotUpdatedAt(updatedAt);
-  }, [queuedCount, snapshot]);
-
-  const aiContext = {
-    selectedCrop: "Maize",
-    currentSeason: "Rainy season",
-    vaultBalance: snapshot.vaultBalance,
-    totalDeposits: snapshot.totalDeposits,
-    totalRewards: snapshot.totalRewards,
-    vaultTarget: 25000,
-    progressPercent: Math.round((snapshot.vaultBalance / 25000) * 100),
-  };
-
-  const quickActions = [
+const positions = [
     {
-      title: "Vault balance",
-      value: `$${snapshot.vaultBalance.toLocaleString()}`,
-      helper: "Available in offline cache",
-      icon: Wallet,
+        vault: "ETH Stablecoin LP",
+        tvl: "$12,231",
+        apy: "8.45%",
+        earnings: "$34.21",
     },
-    {
-      title: "Total deposits",
-      value: `$${snapshot.totalDeposits.toLocaleString()}`,
-      helper: "Includes synced and queued activity",
-      icon: Database,
-    },
-    {
-      title: "Total rewards",
-      value: `$${snapshot.totalRewards.toLocaleString()}`,
-      helper: "Seasonal rewards across active vaults",
-      icon: TrendingUp,
-    },
-    {
-      title: "Active vaults",
-      value: `${snapshot.activeVaults}`,
-      helper: "Mobile-friendly overview",
-      icon: Leaf,
-    },
-  ];
-
-  const queueDepositDemo = async () => {
-    await queueAction(
-      "http://localhost:3001/api/v1/vaults/vault-1/deposit",
-      "POST",
-      { amount: 150 }
-    );
-  };
-
-  return (
-    <div className="space-y-6 md:space-y-8 pb-6 md:pb-10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <Badge variant="primary" className="mb-2 w-fit">
-            Farm Vault Dashboard
-          </Badge>
-          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white">
-            Mobile-ready farming intelligence
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm md:text-base text-gray-600 dark:text-gray-400">
-            Track vault health, request crop suggestions, explore live regional
-            activity, and keep working even when the network drops.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Button
-            variant="outline"
-            leftIcon={<RefreshCcw className="h-4 w-4" />}
-            onClick={sync}
-            isLoading={isSyncing}
-            className="text-sm"
-          >
-            Refresh sync
-          </Button>
-          <Button
-            variant="secondary"
-            leftIcon={<Bot className="h-4 w-4" />}
-            onClick={queueDepositDemo}
-            className="text-sm"
-          >
-            Queue demo deposit
-          </Button>
-        </div>
-      </div>
-
-      <ConnectivityBanner
-        isOnline={isOnline}
-        queuedActions={queuedCount}
-        lastUpdated={snapshotUpdatedAt}
-        isSyncing={isSyncing}
-        onSync={sync}
-      />
-
-      <WeatherWidget />
-      <MilestoneNotification />
+    { vault: "WBTC Core", tvl: "$9,876", apy: "6.72%", earnings: "$18.76" },
+    { vault: "WBTC Core", tvl: "$9,876", apy: "6.72%", earnings: "$18.76" },
+    { vault: "ETH LST LP", tvl: "$7,231", apy: "7.91%", earnings: "$15.32" },
+];
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {quickActions.map((card) => {
+        {isSyncing
+          ? Array.from({ length: 4 }).map((_, i) => <MetricCardSkeleton key={i} />)
+          : quickActions.map((card) => {
           const Icon = card.icon;
           return (
             <Card key={card.title} variant="default" className="hover:shadow-md transition-shadow">
@@ -202,84 +86,189 @@ export default function DashboardPage() {
                     Cached
                   </Badge>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {card.title}
-                  </p>
-   <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                    {card.value}
-                  </p>
-                  <p className="text-xs md:text-sm text-gray-500 mt-1">
-                    {card.helper}
-                  </p>
+                <div className="flex items-center">
+                    <Button
+                        variant="primary"
+                        leftIcon={<Wallet className="w-4 h-4" />}
+                    >
+                        Connect Wallet
+                    </Button>
                 </div>
-              </CardBody>
-            </Card>
-          );
-        })}
-      </div>
+            </div>
+            {/* Quick Stats Section */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card variant="default">
+                    <CardBody className="p-5 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-harvest-green-50 flex items-center justify-center text-harvest-green-600 flex-shrink-0">
+                            <Wallet className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">
+                                Total Deposits
+                            </p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                $0.00
+                            </p>
+                        </div>
+                    </CardBody>
+                </Card>
+                <Card variant="default">
+                    <CardBody className="p-5 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                            <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">
+                                Total Rewards
+                            </p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                $0.00
+                            </p>
+                        </div>
+                    </CardBody>
+                </Card>
+                <Card variant="default">
+                    <CardBody className="p-5 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-harvest-green-50 flex items-center justify-center text-harvest-green-600">
+                            <Wallet className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">
+                                Total Value Locked
+                            </p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                $45,231.89
+                            </p>
+                            <p className="text-sm text-harvest-green-600">
+                                +3.89%
+                            </p>
+                        </div>
+                    </CardBody>
+                </Card>
+                <Card variant="default">
+                    <CardBody className="p-5 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                            <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">
+                                Daily Earnings
+                            </p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                $124.56
+                            </p>
+                            <p className="text-sm text-emerald-600">+12.45%</p>
+                        </div>
+                    </CardBody>
+                </Card>
+                <Card variant="default">
+                    <CardBody className="p-5 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                            <Activity className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">
+                                Active Vaults
+                            </p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                7
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                Across 5 vaults
+                            </p>
+                        </div>
+                    </CardBody>
+                </Card>
+                {/* Optional Action Card */}{" "}
+                <Card
+                    variant="default"
+                    className="hidden lg:block bg-gradient-to-br from-harvest-green-600 to-harvest-green-800 text-white border-none"
+                >
+                    <CardBody className="p-5 flex flex-col justify-center h-full">
+                        <h3 className="font-semibold text-lg mb-1">
+                            Discover Vaults
+                        </h3>
+                        <p className="text-harvest-green-100 text-sm mb-3">
+                            Earn yield on your crypto assets safely.
+                        </p>
+                        <div className="flex items-center text-sm font-medium hover:text-harvest-green-200 cursor-pointer">
+                            Explore now <ArrowRight className="w-4 h-4 ml-1" />
+                        </div>
+                    </CardBody>
+                </Card>
+            </div>
+            {/* Chart Section */}
+            <section className="grid gap-4 lg:grid-cols-2">
+                <div>
+                    <Card variant="default">
+                        <CardBody className="px-2 py-4 h-75">
+                            <p className="text-sm text-gray-500 mb-2">
+                                Portfolio Overview
+                            </p>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData}>
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="value"
+                                        stroke="#16a34a"
+                                        fill="#16a34a"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </CardBody>
+                    </Card>
+                </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.95fr)]">
-        <div className="space-y-6">
-          <CropRecommendationPanel isOnline={isOnline} />
-          <FarmActivityMap />
-          <VaultOverview />
-        </div>
-        <div className="space-y-6">
-          <Card variant="default" className="h-fit">
-            <CardBody className="space-y-5 p-4 md:p-6">
-              <div>
-                <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
-                  Recent vault activity
-                </h2>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Cached locally so the latest dashboard view remains visible
-                  offline.
-                </p>
-              </div>
-              <div className="space-y-3">
-                {snapshot.recentTransactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between rounded-2xl border border-gray-200 dark:border-[rgba(141,187,85,0.15)] bg-gray-50 dark:bg-[#1a3020] px-3 md:px-4 py-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white truncate">
-                        {transaction.type}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {new Date(transaction.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="text-right ml-2">
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        ${transaction.amount}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {transaction.status}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardBody>
-          </Card>
-          <CropInsurancePanel />
-        </div>
-      </div>
+                {/* Active Positions */}
+                <div>
+                    <Card variant="default">
+                        <CardBody className="p-5">
+                            <div className="flex justify-between items-center mb-4">
+                                <p className="text-sm font-medium text-gray-500">
+                                    Active Vault Positions
+                                </p>
+                                <span className="text-sm text-harvest-green-600 cursor-pointer flex items-center">
+                                    View all{" "}
+                                    <ArrowRight className="w-4 h-4 ml-1" />
+                                </span>
+                            </div>
 
-      <div className="space-y-6">
-        <div className="border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)] pt-6">
-          <VaultActivityFeed />
+                            <div className="space-y-4">
+                                {positions.map((p, i) => (
+                                    <div
+                                        key={i}
+                                        className="flex justify-between border-b border-gray-100 pb-2"
+                                    >
+                                        <div>
+                                            <p className="font-medium text-gray-900">
+                                                {p.vault}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                TVL {p.tvl}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-emerald-600 text-sm">
+                                                {p.apy}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {p.earnings}/day
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardBody>
+                    </Card>
+                </div>
+            </section>
+            {/* Main Content Sections */}{" "}
+            <div className="pt-4 border-t border-gray-200">
+                <VaultOverview />
+            </div>
         </div>
-
-        <div className="border-t border-gray-200 dark:border-[rgba(141,187,85,0.12)] pt-6">
-          <SeasonalTipsList showFilters />
-        </div>
-      </div>
-
-      {/* AI Assistant */}
-      <AIAssistantChat context={aiContext} />
-    </div>
-  );
+    );
 }
