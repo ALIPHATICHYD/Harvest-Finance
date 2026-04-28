@@ -19,6 +19,23 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using VaultLib for uint256;
 
+    // Custom Errors
+    error ZeroAssets();
+    error ZeroReceiver();
+    error ZeroOwner();
+    error DepositCapExceeded();
+    error ZeroSharesMinted();
+    error ZeroSharesBurned();
+    error ZeroAssetsRedeemed();
+    error InsufficientShares();
+    error InsufficientVaultAssets();
+    error BlockWithdrawalLimitExceeded();
+    error ZeroToken();
+    error ZeroRecipient();
+    error CannotRescueVaultAsset();
+    error NothingToRescue();
+    error Paused();
+
     // Roles
     bytes32 public constant ADMIN_ROLE  = keccak256("ADMIN_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -59,8 +76,8 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
         string memory _symbol,
         address admin
     ) public initializer {
-        require(address(_asset) != address(0), "Vault: zero asset");
-        require(admin != address(0),            "Vault: zero admin");
+        if (address(_asset) == address(0)) revert ZeroAssets();
+        if (admin == address(0)) revert ZeroRecipient();
 
         __ERC20_init(_name, _symbol);
         __AccessControl_init();
@@ -77,7 +94,7 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
     }
 
     modifier whenNotPaused() {
-        require(!paused, "Vault: paused");
+        if (paused) revert Paused();
         _;
     }
 
@@ -90,14 +107,18 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
         whenNotPaused
         returns (uint256 shares)
     {
-        require(assets > 0,             "Vault: zero assets");
-        require(receiver != address(0), "Vault: zero receiver");
-        require(_totalAssets + assets <= depositCap, "Vault: deposit cap exceeded");
+        if (assets == 0) revert ZeroAssets();
+        if (receiver == address(0)) revert ZeroReceiver();
+        
+        uint256 currentTotalAssets = _totalAssets;
+        if (currentTotalAssets + assets > depositCap) revert DepositCapExceeded();
 
-        shares = convertToShares(assets);
-        require(shares > 0, "Vault: zero shares minted");
+        shares = VaultLib.toShares(assets, totalSupply(), currentTotalAssets);
+        if (shares == 0) revert ZeroSharesMinted();
 
-        _totalAssets += assets;
+        unchecked {
+            _totalAssets = currentTotalAssets + assets;
+        }
         _mint(receiver, shares);
 
         asset.safeTransferFrom(msg.sender, address(this), assets);
@@ -118,23 +139,26 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
         whenNotPaused
         returns (uint256 shares)
     {
-        require(assets > 0,             "Vault: zero assets");
-        require(receiver != address(0), "Vault: zero receiver");
-        require(owner != address(0),    "Vault: zero owner");
+        if (assets == 0) revert ZeroAssets();
+        if (receiver == address(0)) revert ZeroReceiver();
+        if (owner == address(0)) revert ZeroOwner();
 
         _checkWithdrawalLimit(assets);
 
-        shares = convertToShares(assets);
-        require(shares > 0, "Vault: zero shares burned");
+        uint256 currentTotalAssets = _totalAssets;
+        shares = VaultLib.toShares(assets, totalSupply(), currentTotalAssets);
+        if (shares == 0) revert ZeroSharesBurned();
 
         if (msg.sender != owner) {
             _spendAllowance(owner, msg.sender, shares);
         }
 
-        require(balanceOf(owner) >= shares, "Vault: insufficient shares");
-        require(_totalAssets >= assets,     "Vault: insufficient vault assets");
+        if (balanceOf(owner) < shares) revert InsufficientShares();
+        if (currentTotalAssets < assets) revert InsufficientVaultAssets();
 
-        _totalAssets -= assets;
+        unchecked {
+            _totalAssets = currentTotalAssets - assets;
+        }
         _burn(owner, shares);
 
         asset.safeTransfer(receiver, assets);
@@ -155,12 +179,13 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
         whenNotPaused
         returns (uint256 assets)
     {
-        require(shares > 0,             "Vault: zero shares");
-        require(receiver != address(0), "Vault: zero receiver");
-        require(owner != address(0),    "Vault: zero owner");
+        if (shares == 0) revert ZeroSharesBurned();
+        if (receiver == address(0)) revert ZeroReceiver();
+        if (owner == address(0)) revert ZeroOwner();
 
-        assets = convertToAssets(shares);
-        require(assets > 0, "Vault: zero assets redeemed");
+        uint256 currentTotalAssets = _totalAssets;
+        assets = VaultLib.toAssets(shares, totalSupply(), currentTotalAssets);
+        if (assets == 0) revert ZeroAssetsRedeemed();
 
         _checkWithdrawalLimit(assets);
 
@@ -168,10 +193,12 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
             _spendAllowance(owner, msg.sender, shares);
         }
 
-        require(balanceOf(owner) >= shares, "Vault: insufficient shares");
-        require(_totalAssets >= assets,     "Vault: insufficient vault assets");
+        if (balanceOf(owner) < shares) revert InsufficientShares();
+        if (currentTotalAssets < assets) revert InsufficientVaultAssets();
 
-        _totalAssets -= assets;
+        unchecked {
+            _totalAssets = currentTotalAssets - assets;
+        }
         _burn(owner, shares);
 
         asset.safeTransfer(receiver, assets);
@@ -183,15 +210,17 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
      * @dev Internal helper to enforce per-block withdrawal limits.
      */
     function _checkWithdrawalLimit(uint256 amount) internal {
-        if (maxWithdrawalPerBlock == 0) return; // Limit disabled
+        uint256 limit = maxWithdrawalPerBlock;
+        if (limit == 0) return; // Limit disabled
 
         if (block.number > lastWithdrawalBlock) {
             lastWithdrawalBlock = block.number;
             cumulativeWithdrawalsInBlock = amount;
         } else {
-            cumulativeWithdrawalsInBlock += amount;
+            uint256 newCumulative = cumulativeWithdrawalsInBlock + amount;
+            if (newCumulative > limit) revert BlockWithdrawalLimitExceeded();
+            cumulativeWithdrawalsInBlock = newCumulative;
         }
-        require(cumulativeWithdrawalsInBlock <= maxWithdrawalPerBlock, "Vault: block withdrawal limit exceeded");
     }
 
     // --- Admin Functions ---
@@ -217,12 +246,12 @@ contract Vault is Initializable, IVault, ERC20Upgradeable, AccessControlUpgradea
     }
 
     function emergencyWithdraw(address token, address recipient) external onlyRole(ADMIN_ROLE) {
-        require(token != address(0), "Vault: zero token");
-        require(recipient != address(0), "Vault: zero recipient");
-        require(token != address(asset), "Vault: cannot rescue vault asset");
+        if (token == address(0)) revert ZeroToken();
+        if (recipient == address(0)) revert ZeroRecipient();
+        if (token == address(asset)) revert CannotRescueVaultAsset();
 
         uint256 balance = IERC20Upgradeable(token).balanceOf(address(this));
-        require(balance > 0, "Vault: nothing to rescue");
+        if (balance == 0) revert NothingToRescue();
 
         IERC20Upgradeable(token).safeTransfer(recipient, balance);
         emit EmergencyWithdraw(msg.sender, token, recipient, balance);

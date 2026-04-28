@@ -131,8 +131,6 @@ export class StellarService implements OnModuleInit {
             let cursor: string | undefined;
             const pageSize = Math.min(200, Math.max(safeLimit, remainingToSkip > 0 ? 200 : safeLimit));
 
-            // Horizon is cursor-paginated; to honour skip we fast-forward through
-            // prior pages using the largest permitted page size.
             while (remainingToSkip >= pageSize) {
                 const call = this.server
                     .transactions()
@@ -158,7 +156,6 @@ export class StellarService implements OnModuleInit {
                 remainingToSkip -= page.records.length;
 
                 if (page.records.length < pageSize) {
-                    // Reached the end before finishing the skip.
                     return {
                         total: null,
                         skip: safeSkip,
@@ -171,7 +168,6 @@ export class StellarService implements OnModuleInit {
                 }
             }
 
-            // Consume the remaining skip within the next page, then take the requested slice.
             const finalPageSize = Math.min(200, remainingToSkip + safeLimit);
             const finalCall = this.server
                 .transactions()
@@ -211,6 +207,70 @@ export class StellarService implements OnModuleInit {
         } catch (err) {
             this.handleStellarError(err, `getAccountTransactions(${publicKey})`);
         }
+    }
+
+    /**
+     * Decodes XDR for all transactions in a history slice to provide
+     * human-readable operation details.
+     */
+    async getDecodedAccountTransactions(
+        publicKey: string,
+        skip = 0,
+        limit = 20,
+        order: 'asc' | 'desc' = 'desc',
+    ): Promise<{
+        skip: number;
+        limit: number;
+        order: 'asc' | 'desc';
+        records: any[];
+    }> {
+        const history = await this.getAccountTransactions(publicKey, skip, limit, order);
+        
+        const decodedRecords = await Promise.all(history.records.map(async (txMeta: any) => {
+            try {
+                const fullTx = await this.server.transactions().transaction(txMeta.hash).call();
+                const envelope = StellarSdk.TransactionBuilder.fromXDR(fullTx.envelope_xdr, this.networkPassphrase);
+                
+                const operations = envelope instanceof StellarSdk.FeeBumpTransaction 
+                    ? envelope.innerTransaction.operations 
+                    : envelope.operations;
+
+                return {
+                    ...txMeta,
+                    operations: operations.map(op => ({
+                        type: op.type,
+                        details: this.sanitizeOperationDetails(op),
+                    })),
+                };
+            } catch (err) {
+                this.logger.warn(`Failed to decode XDR for tx ${txMeta.hash}: ${err.message}`);
+                return { ...txMeta, operations: [] };
+            }
+        }));
+
+        return {
+            skip: history.skip,
+            limit: history.limit,
+            order: history.order,
+            records: decodedRecords,
+        };
+    }
+
+    private sanitizeOperationDetails(op: any): Record<string, any> {
+        const details: Record<string, any> = { ...op };
+        delete details.type; // already in the outer object
+        
+        // Convert buffers/bigints to strings for JSON safety
+        for (const key in details) {
+            if (details[key] instanceof Buffer) {
+                details[key] = details[key].toString('hex');
+            } else if (typeof details[key] === 'bigint') {
+                details[key] = details[key].toString();
+            } else if (details[key] instanceof StellarSdk.Asset) {
+                details[key] = details[key].toString();
+            }
+        }
+        return details;
     }
 
     async verifyConnection(): Promise<boolean> {

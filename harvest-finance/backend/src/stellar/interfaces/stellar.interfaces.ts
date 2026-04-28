@@ -67,6 +67,21 @@ export interface OperationRecord {
     asset?: string;
 }
 
+export interface DecodedOperation {
+    type: string;
+    details: Record<string, any>;
+}
+
+export interface DecodedTransaction {
+    hash: string;
+    ledger: number;
+    createdAt: string;
+    sourceAccount: string;
+    successful: boolean;
+    memo: string | null;
+    operations: DecodedOperation[];
+}
+
 export interface MultiSigSetupParams {
     primaryPublicKey: string;
     cosignerPublicKeys: string[];
