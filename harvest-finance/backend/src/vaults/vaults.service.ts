@@ -73,6 +73,12 @@ export class VaultsService {
       throw new BadRequestException('Deposit amount must be greater than 0');
     }
 
+    // Check for unreasonably large amounts that could cause overflow
+    const MAX_SAFE_DEPOSIT = 1e30; // Very large but safe number
+    if (amount > MAX_SAFE_DEPOSIT) {
+      throw new BadRequestException('Deposit amount exceeds maximum allowed value');
+    }
+
     const vault = await this.getVaultById(vaultId);
 
     if (vault.status !== VaultStatus.ACTIVE) {
@@ -326,5 +332,45 @@ export class VaultsService {
       createdAt: deposit.createdAt,
       confirmedAt: deposit.confirmedAt,
     };
+  }
+
+  async getApyHistory(vaultId?: string, timeRange: string = '30d'): Promise<any[]> {
+    // Calculate date range
+    const now = new Date();
+    let daysBack = 30;
+
+    switch (timeRange) {
+      case '7d':
+        daysBack = 7;
+        break;
+      case '90d':
+        daysBack = 90;
+        break;
+      case 'all':
+        daysBack = 365; // Approximate 1 year
+        break;
+      default:
+        daysBack = 30;
+    }
+
+    const startDate = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+
+    // For now, generate mock APY data
+    // In production, this would come from yield analytics data stored in database
+    const dataPoints = [];
+    for (let i = 0; i < daysBack; i++) {
+      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+      // Generate somewhat realistic APY data with some variation
+      const baseApy = 8 + Math.sin(i / 10) * 2 + Math.random() * 1;
+      const apy = Math.max(0, Math.min(15, baseApy));
+
+      dataPoints.push({
+        date: date.toISOString().split('T')[0],
+        apy: Math.round(apy * 100) / 100,
+        vaultId: vaultId || 'all',
+      });
+    }
+
+    return dataPoints;
   }
 }
