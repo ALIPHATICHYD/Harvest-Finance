@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "./interfaces/IVault.sol";
+import "./interfaces/IOracle.sol";
 
 /**
  * @title Controller
@@ -13,11 +15,13 @@ contract Controller is Initializable, AccessControlUpgradeable, UUPSUpgradeable 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     
     address public storageContract;
+    address public oracle;
     mapping(address => bool) public vaults;
     mapping(address => address) public strategies;
 
     event VaultAdded(address indexed vault);
     event StrategySet(address indexed vault, address indexed strategy);
+    event OracleSet(address indexed oracle);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -30,6 +34,12 @@ contract Controller is Initializable, AccessControlUpgradeable, UUPSUpgradeable 
 
         _grantRole(DEFAULT_ADMIN_ROLE, governance);
         storageContract = _storage;
+    }
+
+    function setOracle(address _oracle) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_oracle != address(0), "Controller: zero address");
+        oracle = _oracle;
+        emit OracleSet(_oracle);
     }
 
     /**
@@ -58,10 +68,13 @@ contract Controller is Initializable, AccessControlUpgradeable, UUPSUpgradeable 
      * @notice Perform "hard work" (rebalancing, compounding) for a vault.
      * @param vault Address of the vault.
      */
-    function doHardWork(address vault) external设计 onlyRole(OPERATOR_ROLE) {
+    function doHardWork(address vault) external onlyRole(OPERATOR_ROLE) {
         require(vaults[vault], "Controller: unknown vault");
         require(strategies[vault] != address(0), "Controller: no strategy");
-        // Logic for hard work would go here
+        require(oracle != address(0), "Controller: oracle not set");
+        
+        address asset = address(IVault(vault).asset());
+        require(!IOracle(oracle).isStale(asset), "Controller: stale price");
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}

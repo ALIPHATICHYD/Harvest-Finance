@@ -105,3 +105,48 @@ export class StellarHistoryPageDto {
   })
   total: number | null;
 }
+
+export class DecodedOperationDto {
+  @ApiProperty({ example: 'payment', description: 'Operation type' })
+  type: string;
+
+  @ApiProperty({ example: { amount: '100', destination: 'GA...' }, description: 'Operation details' })
+  details: Record<string, any>;
+}
+
+export class DecodedTransactionDto {
+  @ApiProperty({ example: 'fe...abc', description: 'Transaction hash' })
+  hash: string;
+
+  @ApiProperty({ example: 1234567, description: 'Ledger sequence' })
+  ledger: number;
+
+  @ApiProperty({ example: '2026-04-24T12:00:00Z' })
+  createdAt: string;
+
+  @ApiProperty({ example: 'GA...XYZ' })
+  sourceAccount: string;
+
+  @ApiProperty({ example: true })
+  successful: boolean;
+
+  @ApiProperty({ example: 'memo', nullable: true })
+  memo: string | null;
+
+  @ApiProperty({ type: [DecodedOperationDto] })
+  operations: DecodedOperationDto[];
+}
+
+export class DecodedHistoryPageDto {
+  @ApiProperty({ type: [DecodedTransactionDto] })
+  records: DecodedTransactionDto[];
+
+  @ApiProperty({ example: 0 })
+  skip: number;
+
+  @ApiProperty({ example: 20 })
+  limit: number;
+
+  @ApiProperty({ enum: ['asc', 'desc'], example: 'desc' })
+  order: 'asc' | 'desc';
+}

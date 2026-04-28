@@ -18,6 +18,7 @@ import {
 import { StellarService } from './services/stellar.service';
 import { CreateEscrowDto, ReleasePaymentDto, RefundDto, SetupMultiSigDto } from './dto/stellar.dto';
 import {
+    DecodedHistoryPageDto,
     StellarHistoryPageDto,
     StellarHistoryQueryDto,
 } from './dto/stellar-history.dto';
@@ -82,6 +83,26 @@ export class StellarController {
             query.limit ?? 20,
             query.order ?? 'desc',
         );
+    }
+
+    @Get('account/:publicKey/transactions/decoded')
+    @ApiOperation({
+        summary: 'Decoded transaction history for a Stellar account',
+        description: 'Decodes XDR envelopes to provide human-readable operation details.',
+    })
+    @ApiParam({ name: 'publicKey', description: 'Stellar G-address' })
+    @ApiResponse({ status: 200, type: DecodedHistoryPageDto })
+    async getDecodedAccountTransactions(
+        @Param('publicKey') publicKey: string,
+        @Query() query: StellarHistoryQueryDto,
+    ): Promise<DecodedHistoryPageDto> {
+        const result = await this.stellarService.getDecodedAccountTransactions(
+            publicKey,
+            query.skip ?? 0,
+            query.limit ?? 20,
+            query.order ?? 'desc',
+        );
+        return result as DecodedHistoryPageDto;
     }
 
     @Get('fee')
